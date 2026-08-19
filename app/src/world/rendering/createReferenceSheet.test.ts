@@ -20,6 +20,7 @@ import {
   createTownTree,
 } from "../entities/townComponents"
 import { catalogSections, createReferenceSheet } from "./createReferenceSheet"
+import { createContactShadow } from "./isometricPrimitives"
 import { createTownEnvironment } from "./createTownEnvironment"
 import { createLayoutDebugOverlay } from "../layout/createLayoutDebugOverlay"
 import { shipyardZeroLayout, validateTownLayout, type TownLayout } from "../layout/townLayout"
@@ -63,6 +64,7 @@ const productionFactories: FactorySpec[] = [
   })),
   ...buildingModuleKinds.map((module) => ({ name: `module/${module}`, create: () => createBuildingModule(module, 0x6c7bd9) })),
   ...roofFeatureKinds.map((roof) => ({ name: `roof/${roof}`, create: () => createRoofFeature(roof, 0x6c7bd9) })),
+  { name: "shadow/contact", create: () => createContactShadow(96, 48) },
   { name: "layout/environment", create: () => createTownEnvironment(shipyardZeroLayout) },
   { name: "layout/debug", create: () => createLayoutDebugOverlay(shipyardZeroLayout, projects) },
 ]
@@ -116,6 +118,7 @@ describe("Visual system production contract", () => {
       "bridge-x",
       "curb-road",
       "flower-patch",
+      "contact-shadow",
       "orion",
       "spark",
       "nexus",
@@ -142,6 +145,72 @@ describe("Visual system production contract", () => {
     expect(compact.artboard).toEqual({ width: 350, height: 720 })
     wide.container.destroy({ children: true })
     compact.container.destroy({ children: true })
+  })
+})
+
+describe("Isometric contact shadow", () => {
+  it("displaces the shadow toward the lower-right in both axes", () => {
+    const width = 96
+    const depth = 48
+    const shadow = createContactShadow(width, depth)
+    const bounds = shadow.getLocalBounds()
+
+    expect(tokens.shadow.direction).toBe("lower-right")
+    // Relative to the footprint centre the shadow reaches further right and further down than up-left.
+    expect(bounds.maxX).toBeGreaterThan(-bounds.minX)
+    expect(bounds.maxY).toBeGreaterThan(-bounds.minY)
+    expect((bounds.minX + bounds.maxX) / 2).toBeGreaterThan(0)
+    expect((bounds.minY + bounds.maxY) / 2).toBeGreaterThan(0)
+    // It also clears the footprint on that side, so the mass never hides its own shadow.
+    expect(bounds.maxX).toBeGreaterThan(width / 2)
+    expect(bounds.maxY).toBeGreaterThan(depth / 2)
+
+    shadow.destroy({ children: true })
+  })
+
+  it("keeps the 2:1 footprint it grounds without rotating off the grid", () => {
+    const width = tokens.projection.tileWidth * 2
+    const depth = tokens.projection.tileHeight * 2
+    const shadow = createContactShadow(width, depth)
+    const bounds = shadow.getLocalBounds()
+
+    expect((bounds.maxX - bounds.minX) / (bounds.maxY - bounds.minY)).toBeCloseTo(2)
+    expect((bounds.maxX - bounds.minX) / width).toBeCloseTo((bounds.maxY - bounds.minY) / depth)
+    expect(bounds.maxX - bounds.minX).toBeGreaterThan(width)
+    expect(shadow.children.every((child) => child.rotation === 0)).toBe(true)
+
+    shadow.destroy({ children: true })
+  })
+
+  it("draws a tighter core on the contact token over a softer cast on the cast token", () => {
+    const shadow = createContactShadow(120, 60)
+    const [cast, core] = shadow.children
+    const spread = (node: typeof cast) => node.getLocalBounds().maxX - node.getLocalBounds().minX
+
+    expect(shadow.label).toBe("contact-shadow")
+    expect(cast.alpha).toBe(tokens.shadow.castAlpha)
+    expect(core.alpha).toBe(tokens.shadow.contactAlpha)
+    expect(core.alpha).toBeGreaterThan(cast.alpha)
+    expect(spread(core)).toBeLessThan(spread(cast))
+    expect(core.position.x).toBeGreaterThan(0)
+    expect(core.position.x).toBeLessThan(cast.position.x)
+    expect(core.position.y).toBeGreaterThan(0)
+    expect(core.position.y).toBeLessThan(cast.position.y)
+
+    shadow.destroy({ children: true })
+  })
+
+  it("lets a caller override the offset and both alphas", () => {
+    const shadow = createContactShadow(96, 48, { offset: { x: 20, y: 10 }, alpha: 0.4, contactAlpha: 0.5 })
+    const [cast, core] = shadow.children
+
+    expect(cast.alpha).toBe(0.4)
+    expect(core.alpha).toBe(0.5)
+    expect([cast.position.x, cast.position.y]).toEqual([20, 10])
+    expect(core.position.x).toBeCloseTo(9)
+    expect(core.position.y).toBeCloseTo(4.5)
+
+    shadow.destroy({ children: true })
   })
 })
 

@@ -1,7 +1,7 @@
 import { Container, Graphics } from "pixi.js"
 import { hexColor, visualTokens as tokens } from "../../design/visualTokens"
 import type { ProjectDefinition } from "../../data/types"
-import { createCastShadow, createIsoPrism } from "../rendering/isometricPrimitives"
+import { createContactShadow, createIsoPrism } from "../rendering/isometricPrimitives"
 import { createProjectStatusEffect } from "./createProjectStatusEffect"
 import { createProjectStageTreatment } from "./createProjectStageTreatment"
 import { createProjectInteractionChrome } from "./projectInteraction"
@@ -38,7 +38,7 @@ export function createTownBuilding(project: ProjectDefinition, onSelect: (id: st
   let updateMotion = (_elapsedMs: number, _reducedMotion: boolean) => undefined
 
   if (project.building.archetype === "studio") {
-    const shadow = createCastShadow(100, 28, p.castShadow, tokens.shadow.castAlpha)
+    const shadow = createContactShadow(92, 50)
     const modules = project.building.modules.map((kind, index) => createBuildingModule(kind, accent, index))
     const roof = createIsoPrism(72, 40, 13, { top: 0xfff7de, left: 0xe9dfbd, right: 0xd1c49a })
     roof.position.y = -42
@@ -56,7 +56,8 @@ export function createTownBuilding(project: ProjectDefinition, onSelect: (id: st
       if (bulb) bulb.alpha = 0.72 + pulse * 0.28
     }
   } else {
-    const shadow = createCastShadow(130, 34, p.castShadow, tokens.shadow.castAlpha)
+    // The tower is the tallest mass in the town, so its shadow throws further along the same light axis.
+    const shadow = createContactShadow(112, 60, { offset: { x: 18, y: 9 } })
     const base = createIsoPrism(112, 60, 48, { top: p.structure, left: p.structureMid, right: p.structureShadow, stroke: 0xaaa79f })
     let towerFloorIndex = 0
     const modules = project.building.modules.map((kind) => {
@@ -66,11 +67,19 @@ export function createTownBuilding(project: ProjectDefinition, onSelect: (id: st
       if (kind === "sky-wing") module.position.set(58, -13)
       return module
     })
+    // Each sky-wing cantilevers clear of the tower core, so it needs its own ground contact.
+    const wingShadows = project.building.modules
+      .filter((kind) => kind === "sky-wing")
+      .map(() => {
+        const wingShadow = createContactShadow(55, 30)
+        wingShadow.position.x = 58
+        return wingShadow
+      })
     const antenna = project.building.roof ? createRoofFeature(project.building.roof, accent) : new Container()
     antenna.position.y = -124
     const packet = antenna.getChildByLabel("ambient-packet")
     const verticalAccent = new Graphics().poly([24, -117, 34, -112, 34, -61, 24, -66]).fill(accent)
-    building.addChild(shadow, base, ...modules, antenna, verticalAccent)
+    building.addChild(shadow, ...wingShadows, base, ...modules, antenna, verticalAccent)
     addWindows(building, -28, accent, 3)
     addWindows(building, -75, accent, 2)
     updateMotion = (elapsedMs, reducedMotion) => {

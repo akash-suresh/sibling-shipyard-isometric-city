@@ -1,7 +1,7 @@
 import { Container, Graphics } from "pixi.js"
 import { visualTokens as tokens } from "../../design/visualTokens"
 import type { BuildingModuleKind, ProjectDefinition } from "../../data/types"
-import { createCastShadow, createIsoDiamond, createIsoPrism } from "../rendering/isometricPrimitives"
+import { createContactShadow, createIsoDiamond, createIsoPrism } from "../rendering/isometricPrimitives"
 import { orionUpgradeGeometry, orionUpgradeY } from "./orionGeometry"
 import { createProjectStatusEffect } from "./createProjectStatusEffect"
 import { createProjectStageTreatment } from "./createProjectStageTreatment"
@@ -76,15 +76,15 @@ export function createOrionPlot(project: ProjectDefinition, onSelect: (id: strin
   const interaction = createProjectInteractionChrome(project.name, 176, 88, 68)
   interaction.ground.position.y = 4
 
-  const slabShadow = createCastShadow(170, 54, p.castShadow, tokens.shadow.castAlpha)
-  slabShadow.position.set(16, 14)
+  const slabShadow = createContactShadow(174, 86)
+  slabShadow.position.y = 2
   const plotSlab = createIsoPrism(174, 86, 9, { top: 0xc9d8b7, left: 0xa7b897, right: 0x8fa17f, stroke: 0x829373 })
   plotSlab.position.y = 2
   const workPad = createIsoDiamond(144, 68, 0xbec1bd, 0xa8aca8)
   workPad.position.y = -5
 
-  const shadow = createCastShadow(124, 38, p.castShadow, 0.2)
-  shadow.position.set(10, -2)
+  const shadow = createContactShadow(112, 60)
+  shadow.position.y = -8
   const foundation = createIsoPrism(112, 60, 13, { top: 0xd2d0c9, left: 0xb8b5ae, right: 0x9d9b96, stroke: 0x8c8a86 })
   foundation.position.y = -8
 

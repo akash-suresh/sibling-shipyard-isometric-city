@@ -8,7 +8,7 @@ import { createBuildingModule, createRoofFeature } from "../entities/buildingPar
 import { createProjectStageTreatment } from "../entities/createProjectStageTreatment"
 import { createProjectStatusEffect } from "../entities/createProjectStatusEffect"
 import { createTownBench, createTownBridge, createTownCurb, createTownEdge, createTownFlowerPatch, createTownLamp, createTownPerson, createTownServiceVehicle, createTownShrub, createTownSign, createTownTile, createTownTree, type PavedSurface, type RoadDirection } from "../entities/townComponents"
-import { createIsoPrism } from "./isometricPrimitives"
+import { createContactShadow, createIsoPrism } from "./isometricPrimitives"
 import { createTownEnvironment } from "./createTownEnvironment"
 import { shipyardZeroLayout } from "../layout/townLayout"
 import { createLayoutDebugOverlay } from "../layout/createLayoutDebugOverlay"
@@ -66,6 +66,17 @@ function createBuildings() {
   }
 }
 
+const shadowCaption = `contact-shadow · cast ${Math.round(tokens.shadow.castAlpha * 100)}% + core ${Math.round(tokens.shadow.contactAlpha * 100)}%`
+
+/** One mass over its own production shadow, so the light rule is shown rather than only written. */
+function shadowSpecimen(width: number, depth: number, height: number, x: number, groundY: number) {
+  const group = new Container()
+  group.position.set(x, groundY)
+  const mass = createIsoPrism(width, depth, height, { top: p.structure, left: p.structureMid, right: p.structureShadow })
+  group.addChild(createContactShadow(width, depth), mass)
+  return group
+}
+
 function overviewSection(sheet: Container) {
   heading(sheet, "Overview", "The rules every World component shares.")
   sectionTitle(sheet, "PALETTE", 0, 96)
@@ -79,6 +90,8 @@ function overviewSection(sheet: Container) {
   sheet.addChild(card(createTownPerson(), "person · 18 px", 390, 305), card(createTownTree(), "tree · 42 px", 530, 305), card(createTownServiceVehicle(), "vehicle · 54 px", 680, 305, 0.9))
   sectionTitle(sheet, "LOCKED RULES", 0, 400)
   sheet.addChild(label("Upper-left light", 0, 435, 13), label("Lower-right shadow · 16%", 0, 465, 13), label("Ground-contact center anchors", 270, 435, 13), label("Important detail ≥ 3 px", 270, 465, 13), label("Stage ≠ status ≠ milestone", 560, 435, 13), label("One Pixi motion clock", 560, 465, 13))
+  sectionTitle(sheet, "SHADOW & LIGHT", 0, 500)
+  sheet.addChild(shadowSpecimen(64, 32, 36, 96, 580), label(shadowCaption, 190, 545, 12), label("Nested isometric diamonds offset lower-right", 190, 573, 12))
 }
 
 function terrainSection(sheet: Container) {
@@ -192,6 +205,8 @@ function compactOverview(sheet: Container) {
   sheet.addChild(tile, block, card(createTownPerson(), "person", 285, 305))
   sectionTitle(sheet, "LOCKED RULES", 0, 400)
   sheet.addChild(label("Upper-left light · lower-right shadow", 0, 435, 12), label("96 × 48 grid · ground-center anchors", 0, 468, 12), label("Stage ≠ status ≠ milestone", 0, 501, 12), label("One ticker · reduced-motion pose", 0, 534, 12), label("Important detail ≥ 3 px", 0, 567, 12))
+  sectionTitle(sheet, "SHADOW & LIGHT", 0, 606)
+  sheet.addChild(shadowSpecimen(56, 28, 30, 52, 690), label(shadowCaption, 110, 668, 11), label("Nested iso diamonds, no rotation", 110, 692, 11))
 }
 
 function compactTerrain(sheet: Container) {
