@@ -26,6 +26,17 @@ const catalogMilestone = milestoneData[0] as MilestoneDefinition
 const curbSurfaces: PavedSurface[] = ["road", "plaza", "path"]
 const curbRim: RoadDirection[] = ["north", "east", "south", "west"]
 
+/** Counted from the manifest so the printed catalog statistics can never drift from the World. */
+const manifest = {
+  tiles: shipyardZeroLayout.width * shipyardZeroLayout.height,
+  roads: shipyardZeroLayout.roads.length,
+  paths: shipyardZeroLayout.paths.length,
+  water: shipyardZeroLayout.water.length,
+  props: shipyardZeroLayout.decor.length,
+  plots: projects.length,
+  routes: shipyardZeroLayout.routes.length,
+}
+
 function label(text: string, x: number, y: number, size = 15, color: number = p.ink) {
   const node = new Text({ text, style: { fill: color, fontFamily: "Inter, sans-serif", fontSize: size, fontWeight: "600" } })
   node.position.set(x, y)
@@ -138,7 +149,8 @@ function layoutSection(sheet: Container) {
   preview.addChild(createTownEnvironment(shipyardZeroLayout), createLayoutDebugOverlay(shipyardZeroLayout, projects))
   sheet.addChild(preview)
   sectionTitle(sheet, "LAYOUT DEBUG", 585, 105)
-  sheet.addChild(label("90 tiles", 585, 140, 12), label("14 road cells", 585, 170, 12), label("8 water cells", 585, 200, 12), label("22 prop anchors", 585, 230, 12), label("3 project plots", 585, 260, 12), label("2 actor routes", 585, 290, 12))
+  const stats = [`${manifest.tiles} tiles`, `${manifest.roads} road cells`, `${manifest.paths} sidewalk cells`, `${manifest.water} water cells`, `${manifest.props} prop anchors`, `${manifest.plots} project plots`, `${manifest.routes} actor routes`]
+  stats.forEach((text, index) => sheet.addChild(label(text, 585, 140 + index * 28, 12)))
   sheet.addChild(label("◇ grid", 585, 350, 11), label("＋ prop anchor", 585, 380, 11), label("◆ project footprint", 585, 410, 11), label("— walker route", 585, 440, 11), label("0 conflicts", 585, 500, 12, 0x4c7451))
   sheet.addChild(label("Authored → validated → rendered", 0, 575, 11))
 }
@@ -246,7 +258,7 @@ function compactLayout(sheet: Container) {
   const preview = new Container(); preview.position.set(175, 185); preview.scale.set(0.34)
   preview.addChild(createTownEnvironment(shipyardZeroLayout), createLayoutDebugOverlay(shipyardZeroLayout, projects)); sheet.addChild(preview)
   sectionTitle(sheet, "PRODUCTION MANIFEST", 0, 380)
-  sheet.addChild(label("90 tiles · 14 roads · 8 water", 0, 415, 12), label("22 prop anchors · 3 project plots", 0, 450, 12), label("2 validated actor routes", 0, 485, 12), label("◇ grid    ＋ anchor", 0, 545, 11), label("◆ footprint    — route", 0, 580, 11), label("0 conflicts", 0, 640, 12, 0x4c7451))
+  sheet.addChild(label(`${manifest.tiles} tiles · ${manifest.roads} roads · ${manifest.water} water`, 0, 415, 12), label(`${manifest.paths} sidewalks · ${manifest.props} prop anchors`, 0, 450, 12), label(`${manifest.plots} project plots · ${manifest.routes} validated routes`, 0, 485, 12), label("◇ grid    ＋ anchor", 0, 545, 11), label("◆ footprint    — route", 0, 580, 11), label("0 conflicts", 0, 640, 12, 0x4c7451))
 }
 
 function compactProps(sheet: Container) {

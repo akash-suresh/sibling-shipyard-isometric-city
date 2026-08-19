@@ -18,6 +18,7 @@ export interface TownLayout {
   height: number
   roads: Point[]
   plazas: Point[]
+  paths: Point[]
   water: Point[]
   bridges: Array<{ grid: Point; axis: "x" | "y" }>
   decor: DecorPlacement[]
@@ -46,6 +47,9 @@ export const shipyardZeroLayout: TownLayout = {
     point(7, 2), point(7, 3),
   ],
   plazas: [point(2, 5), point(3, 6), point(6, 6), point(7, 5), point(5, 2), point(6, 2)],
+  // Sidewalks only where a pedestrian actually needs one: Orion's frontage walk off the main
+  // road, and the two walker-route cells that would otherwise be grass between paved surfaces.
+  paths: [point(1, 5), point(1, 6), point(3, 5), point(6, 5)],
   water: Array.from({ length: 9 }, (_, y) => point(4, y)).filter(({ y }) => y !== 4),
   bridges: [{ grid: point(4, 4), axis: "x" }],
   decor: [
@@ -80,9 +84,9 @@ export function cellsAlongSegment(from: Point, to: Point): Point[] {
 export function validateTownLayout(layout: TownLayout): TownLayout {
   if (!layout.id || !Number.isInteger(layout.width) || !Number.isInteger(layout.height) || layout.width < 1 || layout.height < 1) throw new Error("Town layout needs a valid id and size")
   const inside = (cell: Point) => Number.isInteger(cell.x) && Number.isInteger(cell.y) && cell.x >= 0 && cell.y >= 0 && cell.x < layout.width && cell.y < layout.height
-  const groups = [layout.roads, layout.plazas, layout.water, layout.bridges.map(({ grid }) => grid)]
+  const groups = [layout.roads, layout.plazas, layout.paths, layout.water, layout.bridges.map(({ grid }) => grid)]
   groups.flat().forEach((cell) => { if (!inside(cell)) throw new Error(`Town layout cell ${key(cell)} is outside the map`) })
-  const surfaces = [layout.roads, layout.plazas, layout.water]
+  const surfaces = [layout.roads, layout.plazas, layout.paths, layout.water]
   const occupied = new Set<string>()
   surfaces.forEach((cells) => cells.forEach((cell) => { const cellKey = key(cell); if (occupied.has(cellKey)) throw new Error(`Town layout has overlapping surfaces at ${cellKey}`); occupied.add(cellKey) }))
   const roadKeys = new Set(layout.roads.map(key)); const waterKeys = new Set(layout.water.map(key)); const bridgeKeys = new Set(layout.bridges.map(({ grid }) => key(grid)))

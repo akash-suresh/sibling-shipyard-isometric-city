@@ -116,7 +116,10 @@ describe("Visual system production contract", () => {
       "bench",
       "project-sign",
       "bridge-x",
+      "tile-path",
       "curb-road",
+      "curb-plaza",
+      "curb-path",
       "flower-patch",
       "contact-shadow",
       "orion",
@@ -220,6 +223,7 @@ const curbProbeLayout: TownLayout = {
   height: 5,
   roads: [1, 2, 3].flatMap((x) => [1, 2, 3].map((y) => ({ x, y }))),
   plazas: [],
+  paths: [],
   water: [],
   bridges: [],
   decor: [],
@@ -238,10 +242,10 @@ describe("Town curbs", () => {
     expect(curbs).not.toContain(cell(2, 2))
   })
 
-  it("kerbs both paved surfaces of the production town", () => {
+  it("kerbs every paved surface of the production town", () => {
     const environment = createTownEnvironment(shipyardZeroLayout)
 
-    expect(descendantLabels(environment)).toEqual(expect.arrayContaining(["curb-road", "curb-plaza"]))
+    expect(descendantLabels(environment)).toEqual(expect.arrayContaining(["curb-road", "curb-plaza", "curb-path"]))
 
     environment.destroy({ children: true })
   })
@@ -269,6 +273,20 @@ describe("Town curbs", () => {
     expect(curbs).toHaveLength(0)
   })
 
+  it("gives a road and sidewalk boundary one curb, owned by the sidewalk", () => {
+    const terrain = createTownEnvironment(shipyardZeroLayout).getChildByLabel("layout-terrain")!
+    const at = (x: number, y: number) => {
+      const screen = gridToScreen({ x, y })
+      return terrain.children.filter((child) => child.label?.startsWith("curb-") && child.x === screen.x && child.y === screen.y).map((child) => child.label)
+    }
+
+    // (6,5) is a sidewalk boxed in by asphalt west and north and plaza east and south, so the
+    // sidewalk owns exactly those two level changes and nothing else.
+    expect(at(6, 5)).toEqual(["curb-path"])
+    // (5,5) is the road on the far side of that western edge: same boundary, no second lip.
+    expect(at(5, 5)).toEqual([])
+  })
+
   it("raises the curb by the projection token rather than a literal height", () => {
     const standard = createTownCurb({ edges: ["north"] })
     const doubled = createTownCurb({ edges: ["north"], height: tokens.projection.curbHeight * 2 })
@@ -278,5 +296,25 @@ describe("Town curbs", () => {
 
     standard.destroy({ children: true })
     doubled.destroy({ children: true })
+  })
+})
+
+describe("Town sidewalks", () => {
+  it("renders the manifest path cells as sidewalk tiles", () => {
+    const terrain = createTownEnvironment(shipyardZeroLayout).getChildByLabel("layout-terrain")!
+    const sidewalks = terrain.children.filter((child) => child.label === "tile-path").map((child) => `${child.x},${child.y}`)
+    const expected = shipyardZeroLayout.paths.map((grid) => { const screen = gridToScreen(grid); return `${screen.x},${screen.y}` })
+
+    expect(sidewalks.length).toBeGreaterThan(0)
+    expect(sidewalks.sort()).toEqual(expected.sort())
+  })
+
+  it("connects Orion's plot to the pedestrian network", () => {
+    const orion = projects.find(({ id }) => id === "orion")!
+    const paths = new Set(shipyardZeroLayout.paths.map(({ x, y }) => `${x},${y}`))
+    const neighbors = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => `${orion.grid.x + dx},${orion.grid.y + dy}`)
+
+    expect(orion.grid).toEqual({ x: 2, y: 6 })
+    expect(neighbors.filter((cell) => paths.has(cell))).not.toHaveLength(0)
   })
 })

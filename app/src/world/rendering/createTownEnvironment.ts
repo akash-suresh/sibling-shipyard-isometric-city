@@ -68,15 +68,17 @@ export function createTownEnvironment(layout: TownLayout = shipyardZeroLayout) {
 
   const roadCells = new Set(layout.roads.map(({ x, y }) => cellKey(x, y)))
   const plazaCells = new Set(layout.plazas.map(({ x, y }) => cellKey(x, y)))
+  const pathCells = new Set(layout.paths.map(({ x, y }) => cellKey(x, y)))
   const waterCells = new Set(layout.water.map(({ x, y }) => cellKey(x, y)))
   const pavedCells = new Map<string, PavedSurface>()
   layout.plazas.forEach(({ x, y }) => pavedCells.set(cellKey(x, y), "plaza"))
+  layout.paths.forEach(({ x, y }) => pavedCells.set(cellKey(x, y), "path"))
   layout.roads.forEach(({ x, y }) => pavedCells.set(cellKey(x, y), "road"))
   const terrain = new Container(); terrain.label = "layout-terrain"; terrain.zIndex = 0
   for (let x = 0; x < layout.width; x += 1) {
     for (let y = 0; y < layout.height; y += 1) {
       const point = gridToScreen({ x, y }); const key = cellKey(x, y)
-      const kind = waterCells.has(key) ? "water" : roadCells.has(key) ? "road" : plazaCells.has(key) ? "plaza" : (x * 3 + y * 5) % 11 === 0 ? "grass-accent" : "grass"
+      const kind = waterCells.has(key) ? "water" : roadCells.has(key) ? "road" : plazaCells.has(key) ? "plaza" : pathCells.has(key) ? "path" : (x * 3 + y * 5) % 11 === 0 ? "grass-accent" : "grass"
       const tile = createTownTile(kind, kind === "road" ? roadConnections(x, y, roadCells) : [])
       tile.position.copyFrom(point); terrain.addChild(tile)
       const surface = pavedCells.get(key)
