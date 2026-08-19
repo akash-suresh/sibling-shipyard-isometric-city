@@ -1,0 +1,10 @@
+[
+  {
+    "id": "orion-public-beta",
+    "projectId": "orion",
+    "title": "Public Beta reached",
+    "date": "August 19, 2026",
+    "event": "construction-upgrade",
+    "resultingModules": ["lab-floor", "beta-floor"]
+  }
+]

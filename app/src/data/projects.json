@@ -1,0 +1,50 @@
+[
+  {
+    "id": "orion",
+    "name": "Orion",
+    "summary": "An ambitious project taking shape in the yard.",
+    "stage": "prototype",
+    "status": "building",
+    "grid": { "x": 2, "y": 6 },
+    "building": {
+      "archetype": "workshop",
+      "modules": ["lab-floor"],
+      "roof": "crane",
+      "accent": "#ef8354"
+    },
+    "latestMilestone": "Working prototype",
+    "nextMilestone": "Public Beta"
+  },
+  {
+    "id": "spark",
+    "name": "Spark",
+    "summary": "A small live product with a bright pulse.",
+    "stage": "shipped",
+    "status": "live",
+    "grid": { "x": 7, "y": 6 },
+    "building": {
+      "archetype": "studio",
+      "modules": ["office-floor"],
+      "roof": "beacon",
+      "accent": "#f4c95d"
+    },
+    "latestMilestone": "First release",
+    "nextMilestone": "100 active users"
+  },
+  {
+    "id": "nexus",
+    "name": "Nexus",
+    "summary": "A growing platform becoming a Shipyard landmark.",
+    "stage": "growing",
+    "status": "growing",
+    "grid": { "x": 5, "y": 2 },
+    "building": {
+      "archetype": "tower",
+      "modules": ["tower-floor", "tower-floor", "sky-wing"],
+      "roof": "antenna",
+      "accent": "#6c7bd9"
+    },
+    "latestMilestone": "1,000 users",
+    "nextMilestone": "Landmark status"
+  }
+]
