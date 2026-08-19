@@ -1,6 +1,6 @@
 import { Container, Graphics } from "pixi.js"
 import { visualTokens as tokens } from "../../design/visualTokens"
-import { createTownBench, createTownBridge, createTownEdge, createTownFlowerPatch, createTownLamp, createTownShrub, createTownSign, createTownTile, createTownTree, type RoadDirection } from "../entities/townComponents"
+import { createTownBench, createTownBridge, createTownCurb, createTownEdge, createTownFlowerPatch, createTownLamp, createTownShrub, createTownSign, createTownTile, createTownTree, type PavedSurface, type RoadDirection } from "../entities/townComponents"
 import { shipyardZeroLayout, validateTownLayout, type DecorPlacement, type TownLayout } from "../layout/townLayout"
 import { gridToScreen } from "../projection/isometric"
 
@@ -10,6 +10,28 @@ const cellKey = (x: number, y: number) => `${x},${y}`
 function roadConnections(x: number, y: number, roads: Set<string>): RoadDirection[] {
   const neighbors: Array<[RoadDirection, number, number]> = [["east", x + 1, y], ["south", x, y + 1], ["west", x - 1, y], ["north", x, y - 1]]
   return neighbors.filter(([, nextX, nextY]) => roads.has(cellKey(nextX, nextY))).map(([direction]) => direction)
+}
+
+/** Asphalt sits lowest; pedestrian surfaces sit on the raised lip above it. */
+const curbLevel: Record<PavedSurface, number> = { road: 0, plaza: 1, path: 1 }
+
+/**
+ * Inverse of the road scan. Exactly one cell owns each boundary: the raised surface owns a
+ * level change, any paved surface owns its edge against open ground, and water boundaries
+ * are left to the bank treatment.
+ */
+function curbEdges(x: number, y: number, paved: Map<string, PavedSurface>, water: Set<string>): RoadDirection[] {
+  const surface = paved.get(cellKey(x, y))
+  if (!surface) return []
+  const neighbors: Array<[RoadDirection, number, number]> = [["north", x, y - 1], ["east", x + 1, y], ["south", x, y + 1], ["west", x - 1, y]]
+  return neighbors
+    .filter(([, nextX, nextY]) => {
+      const neighborKey = cellKey(nextX, nextY)
+      if (water.has(neighborKey)) return false
+      const neighbor = paved.get(neighborKey)
+      return neighbor ? curbLevel[surface] > curbLevel[neighbor] : true
+    })
+    .map(([direction]) => direction)
 }
 
 function decorFactory(placement: DecorPlacement) {
@@ -47,6 +69,9 @@ export function createTownEnvironment(layout: TownLayout = shipyardZeroLayout) {
   const roadCells = new Set(layout.roads.map(({ x, y }) => cellKey(x, y)))
   const plazaCells = new Set(layout.plazas.map(({ x, y }) => cellKey(x, y)))
   const waterCells = new Set(layout.water.map(({ x, y }) => cellKey(x, y)))
+  const pavedCells = new Map<string, PavedSurface>()
+  layout.plazas.forEach(({ x, y }) => pavedCells.set(cellKey(x, y), "plaza"))
+  layout.roads.forEach(({ x, y }) => pavedCells.set(cellKey(x, y), "road"))
   const terrain = new Container(); terrain.label = "layout-terrain"; terrain.zIndex = 0
   for (let x = 0; x < layout.width; x += 1) {
     for (let y = 0; y < layout.height; y += 1) {
@@ -54,6 +79,11 @@ export function createTownEnvironment(layout: TownLayout = shipyardZeroLayout) {
       const kind = waterCells.has(key) ? "water" : roadCells.has(key) ? "road" : plazaCells.has(key) ? "plaza" : (x * 3 + y * 5) % 11 === 0 ? "grass-accent" : "grass"
       const tile = createTownTile(kind, kind === "road" ? roadConnections(x, y, roadCells) : [])
       tile.position.copyFrom(point); terrain.addChild(tile)
+      const surface = pavedCells.get(key)
+      if (surface) {
+        const edges = curbEdges(x, y, pavedCells, waterCells)
+        if (edges.length > 0) { const curb = createTownCurb({ edges, surface }); curb.position.copyFrom(point); terrain.addChild(curb) }
+      }
       if (kind === "water") {
         const edges: RoadDirection[] = ["east", "west"]
         if (y === 0) edges.push("north"); if (y === layout.height - 1) edges.push("south")

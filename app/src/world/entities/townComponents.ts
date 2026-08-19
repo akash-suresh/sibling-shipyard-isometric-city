@@ -61,6 +61,55 @@ export function createTownEdge(direction: RoadDirection, kind: "bank" | "curb" =
   return edge
 }
 
+export type PavedSurface = "road" | "plaza" | "path"
+
+export interface TownCurbOptions {
+  edges: RoadDirection[]
+  surface?: PavedSurface
+  height?: number
+}
+
+/** Band depth as a fraction of one tile: traffic kerbs read heavier than a garden path lip. */
+const curbDepth: Record<PavedSurface, number> = { road: 0.16, plaza: 0.13, path: 0.1 }
+const curbContact: Record<PavedSurface, number> = { road: p.roadSeam, plaza: p.plazaSeam, path: p.sidewalkSeam }
+const curbOrder: RoadDirection[] = ["north", "east", "south", "west"]
+const halfTileWidth = tokens.projection.tileWidth / 2
+const halfTileDepth = tokens.projection.tileHeight / 2
+/** Each run walks its tile edge clockwise; `inward` is the signed grid step toward the tile centre. */
+const curbRuns: Record<RoadDirection, { from: [number, number]; to: [number, number]; inward: [number, number] }> = {
+  north: { from: [0, -halfTileDepth], to: [halfTileWidth, 0], inward: [-1, 1] },
+  east: { from: [halfTileWidth, 0], to: [0, halfTileDepth], inward: [-1, -1] },
+  south: { from: [0, halfTileDepth], to: [-halfTileWidth, 0], inward: [1, -1] },
+  west: { from: [-halfTileWidth, 0], to: [0, -halfTileDepth], inward: [1, 1] },
+}
+
+export function createTownCurb({ edges, surface = "road", height = tokens.projection.curbHeight }: TownCurbOptions) {
+  const curb = new Container()
+  curb.label = `curb-${surface}`
+  const depth = curbDepth[surface]
+  const faces = new Graphics()
+  const tops = new Graphics()
+  const contact = new Graphics()
+  curbOrder.filter((direction) => edges.includes(direction)).forEach((direction) => {
+    const { from, to, inward } = curbRuns[direction]
+    // Overrun the corners by half a pixel so a run across neighbouring tiles never shows a hairline.
+    const overrunX = Math.sign(to[0] - from[0]) * 0.5
+    const overrunY = Math.sign(to[1] - from[1]) * 0.25
+    const insetX = inward[0] * halfTileWidth * depth
+    const insetY = inward[1] * halfTileDepth * depth
+    const outer: [number, number][] = [[from[0] - overrunX, from[1] - overrunY], [to[0] + overrunX, to[1] + overrunY]]
+    const inner = outer.map(([x, y]): [number, number] => [x + insetX, y + insetY])
+    // Only one wall of the lip faces the camera: the one rising from the lower of the two run lines.
+    const [footA, footB] = insetY > 0 ? inner : outer
+    faces.poly([footA[0], footA[1], footB[0], footB[1], footB[0], footB[1] - height, footA[0], footA[1] - height]).fill(p.curbFace)
+    tops.poly([outer[0][0], outer[0][1] - height, outer[1][0], outer[1][1] - height, inner[1][0], inner[1][1] - height, inner[0][0], inner[0][1] - height]).fill(p.curb)
+    contact.moveTo(footA[0], footA[1]).lineTo(footB[0], footB[1])
+  })
+  contact.stroke({ color: curbContact[surface], width: 1, alpha: 0.8 })
+  curb.addChild(faces, tops, contact)
+  return curb
+}
+
 export function createTownBridge(axis: "x" | "y" = "x") {
   const bridge = new Container()
   bridge.label = `bridge-${axis}`

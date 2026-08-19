@@ -1,12 +1,14 @@
 import { Container } from "pixi.js"
 import { describe, expect, it } from "vitest"
 import { buildingModuleKinds, projectStages, projectStatuses, roofFeatureKinds } from "../../data/types"
+import { visualTokens as tokens } from "../../design/visualTokens"
 import { createBuildingModule, createRoofFeature } from "../entities/buildingParts"
 import { createProjectStageTreatment } from "../entities/createProjectStageTreatment"
 import { createProjectStatusEffect } from "../entities/createProjectStatusEffect"
 import {
   createTownBench,
   createTownBridge,
+  createTownCurb,
   createTownEdge,
   createTownFlowerPatch,
   createTownLamp,
@@ -20,7 +22,8 @@ import {
 import { catalogSections, createReferenceSheet } from "./createReferenceSheet"
 import { createTownEnvironment } from "./createTownEnvironment"
 import { createLayoutDebugOverlay } from "../layout/createLayoutDebugOverlay"
-import { shipyardZeroLayout } from "../layout/townLayout"
+import { shipyardZeroLayout, validateTownLayout, type TownLayout } from "../layout/townLayout"
+import { gridToScreen } from "../projection/isometric"
 import { projects } from "../../data/loadProjects"
 
 type FactorySpec = {
@@ -37,6 +40,9 @@ const productionFactories: FactorySpec[] = [
   { name: "terrain/water", create: () => createTownTile("water") },
   { name: "terrain/bank-north", create: () => createTownEdge("north") },
   { name: "terrain/bank-east", create: () => createTownEdge("east") },
+  { name: "terrain/curb-road", create: () => createTownCurb({ edges: ["north", "east", "south", "west"] }) },
+  { name: "terrain/curb-plaza", create: () => createTownCurb({ edges: ["north", "west"], surface: "plaza" }) },
+  { name: "terrain/curb-path", create: () => createTownCurb({ edges: ["south"], surface: "path" }) },
   { name: "terrain/bridge-x", create: () => createTownBridge("x") },
   { name: "terrain/bridge-y", create: () => createTownBridge("y") },
   { name: "prop/tree", create: createTownTree },
@@ -108,6 +114,7 @@ describe("Visual system production contract", () => {
       "bench",
       "project-sign",
       "bridge-x",
+      "curb-road",
       "flower-patch",
       "orion",
       "spark",
@@ -135,5 +142,72 @@ describe("Visual system production contract", () => {
     expect(compact.artboard).toEqual({ width: 350, height: 720 })
     wide.container.destroy({ children: true })
     compact.container.destroy({ children: true })
+  })
+})
+
+const curbProbeLayout: TownLayout = {
+  id: "curb-probe",
+  width: 5,
+  height: 5,
+  roads: [1, 2, 3].flatMap((x) => [1, 2, 3].map((y) => ({ x, y }))),
+  plazas: [],
+  water: [],
+  bridges: [],
+  decor: [],
+  routes: [],
+}
+
+describe("Town curbs", () => {
+  it("kerbs paved cells only where the surface class changes", () => {
+    validateTownLayout(curbProbeLayout)
+    const terrain = createTownEnvironment(curbProbeLayout).getChildByLabel("layout-terrain")!
+    const curbs = terrain.children.filter((child) => child.label === "curb-road").map((child) => `${child.x},${child.y}`)
+    const cell = (x: number, y: number) => { const screen = gridToScreen({ x, y }); return `${screen.x},${screen.y}` }
+
+    expect(curbs).toHaveLength(8)
+    expect(curbs).toContain(cell(1, 1))
+    expect(curbs).not.toContain(cell(2, 2))
+  })
+
+  it("kerbs both paved surfaces of the production town", () => {
+    const environment = createTownEnvironment(shipyardZeroLayout)
+
+    expect(descendantLabels(environment)).toEqual(expect.arrayContaining(["curb-road", "curb-plaza"]))
+
+    environment.destroy({ children: true })
+  })
+
+  it("gives a road and plaza boundary one curb, owned by the raised surface", () => {
+    const terrain = createTownEnvironment(shipyardZeroLayout).getChildByLabel("layout-terrain")!
+    const at = (x: number, y: number) => {
+      const screen = gridToScreen({ x, y })
+      return terrain.children.filter((child) => child.label?.startsWith("curb-") && child.x === screen.x && child.y === screen.y).map((child) => child.label)
+    }
+
+    // (7,5) plaza carries the lip down to the (7,4) asphalt, which stays flush on that edge.
+    expect(at(7, 5)).toEqual(["curb-plaza"])
+    // (7,4) road touches road on three sides and that plaza on the fourth, so it owns no boundary.
+    expect(at(7, 4)).toEqual([])
+    // A road cell that genuinely borders open ground still gets its own retaining lip.
+    expect(at(1, 4)).toEqual(["curb-road"])
+  })
+
+  it("leaves water boundaries to the bank treatment instead of kerbing them", () => {
+    const terrain = createTownEnvironment(shipyardZeroLayout).getChildByLabel("layout-terrain")!
+    const bridge = gridToScreen({ x: 4, y: 4 })
+    const curbs = terrain.children.filter((child) => child.label?.startsWith("curb-") && child.x === bridge.x && child.y === bridge.y)
+
+    expect(curbs).toHaveLength(0)
+  })
+
+  it("raises the curb by the projection token rather than a literal height", () => {
+    const standard = createTownCurb({ edges: ["north"] })
+    const doubled = createTownCurb({ edges: ["north"], height: tokens.projection.curbHeight * 2 })
+
+    expect(standard.getLocalBounds().minY).toBeCloseTo(-tokens.projection.tileHeight / 2 - 0.25 - tokens.projection.curbHeight)
+    expect(doubled.getLocalBounds().minY).toBeCloseTo(standard.getLocalBounds().minY - tokens.projection.curbHeight)
+
+    standard.destroy({ children: true })
+    doubled.destroy({ children: true })
   })
 })

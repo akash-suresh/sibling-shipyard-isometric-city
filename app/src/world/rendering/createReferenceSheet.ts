@@ -7,7 +7,7 @@ import { createProjectBuilding } from "../entities/createProjectBuilding"
 import { createBuildingModule, createRoofFeature } from "../entities/buildingParts"
 import { createProjectStageTreatment } from "../entities/createProjectStageTreatment"
 import { createProjectStatusEffect } from "../entities/createProjectStatusEffect"
-import { createTownBench, createTownBridge, createTownEdge, createTownFlowerPatch, createTownLamp, createTownPerson, createTownServiceVehicle, createTownShrub, createTownSign, createTownTile, createTownTree } from "../entities/townComponents"
+import { createTownBench, createTownBridge, createTownCurb, createTownEdge, createTownFlowerPatch, createTownLamp, createTownPerson, createTownServiceVehicle, createTownShrub, createTownSign, createTownTile, createTownTree, type PavedSurface, type RoadDirection } from "../entities/townComponents"
 import { createIsoPrism } from "./isometricPrimitives"
 import { createTownEnvironment } from "./createTownEnvironment"
 import { shipyardZeroLayout } from "../layout/townLayout"
@@ -23,6 +23,8 @@ export const catalogArtboards = { wide: { width: 800, height: 620 }, compact: { 
 
 const p = tokens.palette
 const catalogMilestone = milestoneData[0] as MilestoneDefinition
+const curbSurfaces: PavedSurface[] = ["road", "plaza", "path"]
+const curbRim: RoadDirection[] = ["north", "east", "south", "west"]
 
 function label(text: string, x: number, y: number, size = 15, color: number = p.ink) {
   const node = new Text({ text, style: { fill: color, fontFamily: "Inter, sans-serif", fontSize: size, fontWeight: "600" } })
@@ -81,21 +83,28 @@ function overviewSection(sheet: Container) {
 
 function terrainSection(sheet: Container) {
   heading(sheet, "Terrain", "Connected tiles, water edges, and crossings.")
-  sectionTitle(sheet, "SURFACES", 0, 94)
+  sectionTitle(sheet, "SURFACES", 0, 84)
   const kinds = ["grass", "grass-accent", "road", "plaza", "path", "water"] as const
   kinds.forEach((kind, index) => {
-    const tile = createTownTile(kind, kind === "road" ? ["north", "south"] : []); tile.position.set(64 + index * 130, 165)
-    sheet.addChild(tile, label(kind, 30 + index * 130, 200, 10))
+    const tile = createTownTile(kind, kind === "road" ? ["north", "south"] : []); tile.position.set(64 + index * 130, 148)
+    sheet.addChild(tile, label(kind, 30 + index * 130, 180, 10))
     if (kind === "water") { const edge = createTownEdge("east"); edge.position.copyFrom(tile.position); sheet.addChild(edge) }
   })
-  sectionTitle(sheet, "ROAD CONNECTIONS", 0, 270)
+  sectionTitle(sheet, "ROAD CONNECTIONS", 0, 212)
   const variants = [{ name: "terminus", connections: ["north"] }, { name: "straight", connections: ["north", "south"] }, { name: "corner", connections: ["north", "east"] }, { name: "junction", connections: ["north", "east", "south"] }] as const
-  variants.forEach((variant, index) => { const tile = createTownTile("road", [...variant.connections]); tile.position.set(80 + index * 180, 345); sheet.addChild(tile, label(variant.name, 48 + index * 180, 380, 10)) })
-  sectionTitle(sheet, "WATER & EDGES", 0, 445)
-  const water = createTownTile("water"); water.position.set(70, 525)
+  variants.forEach((variant, index) => { const tile = createTownTile("road", [...variant.connections]); tile.position.set(80 + index * 180, 276); sheet.addChild(tile, label(variant.name, 48 + index * 180, 308, 10)) })
+  sectionTitle(sheet, "CURBS", 0, 340)
+  curbSurfaces.forEach((surface, index) => {
+    const tile = createTownTile(surface, surface === "road" ? ["north", "south"] : [])
+    const curb = createTownCurb({ edges: [...curbRim], surface })
+    tile.position.set(130 + index * 270, 404); curb.position.copyFrom(tile.position)
+    sheet.addChild(tile, curb, label(`curb-${surface}`, 98 + index * 270, 436, 10))
+  })
+  sectionTitle(sheet, "WATER & EDGES", 0, 468)
+  const water = createTownTile("water"); water.position.set(70, 548)
   const northBank = createTownEdge("north"); northBank.position.copyFrom(water.position)
   const eastBank = createTownEdge("east"); eastBank.position.copyFrom(water.position)
-  sheet.addChild(water, northBank, eastBank, card(createTownBridge("x"), "bridge · x", 260, 525, 0.86), card(createTownBridge("y"), "bridge · y", 460, 525, 0.86), card(createTownFlowerPatch(), "bank flowers", 650, 525))
+  sheet.addChild(water, northBank, eastBank, card(createTownBridge("x"), "bridge · x", 260, 548, 0.86), card(createTownBridge("y"), "bridge · y", 460, 548, 0.86), card(createTownFlowerPatch(), "bank flowers", 650, 548))
 }
 
 function buildingsSection(sheet: Container) {
@@ -187,15 +196,22 @@ function compactOverview(sheet: Container) {
 
 function compactTerrain(sheet: Container) {
   compactHeading(sheet, "Terrain", "Surfaces, roads, water, and bridges.")
-  sectionTitle(sheet, "SURFACES", 0, 78)
+  sectionTitle(sheet, "SURFACES", 0, 70)
   const kinds = ["grass", "grass-accent", "road", "plaza", "path", "water"] as const
-  kinds.forEach((kind, index) => { const tile = createTownTile(kind, kind === "road" ? ["north", "south"] : []); const x = 58 + (index % 3) * 116; const y = 145 + Math.floor(index / 3) * 105; tile.position.set(x, y); sheet.addChild(tile, label(kind, x - 35, y + 34, 9)); if (kind === "water") { const edge = createTownEdge("east"); edge.position.copyFrom(tile.position); sheet.addChild(edge) } })
-  sectionTitle(sheet, "ROAD GRAMMAR", 0, 320)
+  kinds.forEach((kind, index) => { const tile = createTownTile(kind, kind === "road" ? ["north", "south"] : []); const x = 58 + (index % 3) * 116; const y = 128 + Math.floor(index / 3) * 92; tile.position.set(x, y); sheet.addChild(tile, label(kind, x - 35, y + 32, 9)); if (kind === "water") { const edge = createTownEdge("east"); edge.position.copyFrom(tile.position); sheet.addChild(edge) } })
+  sectionTitle(sheet, "ROAD GRAMMAR", 0, 276)
   const roads = [["terminus", ["north"]], ["straight", ["north", "south"]], ["corner", ["north", "east"]], ["junction", ["north", "east", "south"]]] as const
-  roads.forEach(([name, connections], index) => { const tile = createTownTile("road", [...connections]); const x = 85 + (index % 2) * 180; const y = 385 + Math.floor(index / 2) * 105; tile.position.set(x, y); sheet.addChild(tile, label(name, x - 32, y + 34, 9)) })
-  sectionTitle(sheet, "WATER KIT", 0, 565)
-  const water = createTownTile("water"); water.position.set(60, 635); const bank = createTownEdge("north"); bank.position.copyFrom(water.position)
-  sheet.addChild(water, bank, card(createTownBridge("x"), "bridge x", 180, 635, 0.7), card(createTownBridge("y"), "bridge y", 300, 635, 0.7))
+  roads.forEach(([name, connections], index) => { const tile = createTownTile("road", [...connections]); const x = 85 + (index % 2) * 180; const y = 334 + Math.floor(index / 2) * 92; tile.position.set(x, y); sheet.addChild(tile, label(name, x - 32, y + 32, 9)) })
+  sectionTitle(sheet, "CURBS", 0, 482)
+  curbSurfaces.forEach((surface, index) => {
+    const tile = createTownTile(surface, surface === "road" ? ["north", "south"] : [])
+    const curb = createTownCurb({ edges: [...curbRim], surface })
+    const x = 58 + index * 116; tile.position.set(x, 540); curb.position.copyFrom(tile.position)
+    sheet.addChild(tile, curb, label(`curb-${surface}`, x - 35, 572, 9))
+  })
+  sectionTitle(sheet, "WATER KIT", 0, 596)
+  const water = createTownTile("water"); water.position.set(60, 656); const bank = createTownEdge("north"); bank.position.copyFrom(water.position)
+  sheet.addChild(water, bank, card(createTownBridge("x"), "bridge x", 180, 656, 0.7), card(createTownBridge("y"), "bridge y", 300, 656, 0.7))
 }
 
 function compactBuildings(sheet: Container) {
