@@ -7,18 +7,27 @@ const p = tokens.palette
 export type TownTileKind = "grass" | "grass-accent" | "road" | "plaza" | "path" | "water"
 export type RoadDirection = "north" | "east" | "south" | "west"
 
+/** Surfaces overdraw by half a pixel so neighbouring diamonds never reveal an antialiased hairline seam. */
+const tileFill: Record<TownTileKind, number> = {
+  grass: p.grassLight,
+  "grass-accent": p.grassLight,
+  road: p.road,
+  plaza: p.plaza,
+  path: p.sidewalk,
+  water: p.water,
+}
+
 export function createTownTile(kind: TownTileKind, roadConnections: RoadDirection[] = []) {
-  const colors: Record<TownTileKind, { fill: number; stroke: number }> = {
-    grass: { fill: p.grassLight, stroke: 0xa2c492 },
-    "grass-accent": { fill: 0xa8ce98, stroke: 0x98bd89 },
-    road: { fill: 0x626a72, stroke: 0x555d65 },
-    plaza: { fill: 0xd8cfbd, stroke: 0xbfb5a5 },
-    path: { fill: 0xc8b996, stroke: 0xaea17f },
-    water: { fill: p.water, stroke: 0x69b7bd },
-  }
   const tile = new Container()
   tile.label = `tile-${kind}`
-  tile.addChild(createIsoDiamond(96, 48, colors[kind].fill, colors[kind].stroke))
+  tile.addChild(createIsoDiamond(97, 49, tileFill[kind]))
+  if (kind === "grass-accent") {
+    const patch = new Graphics()
+      .poly([-2, -13, 25, 0, -2, 13, -29, 0]).fill(p.grassDark)
+      .poly([26, -6, 40, 1, 26, 8, 12, 1]).fill(p.grassDark)
+    patch.alpha = 0.75
+    tile.addChild(patch)
+  }
   if (kind === "road") {
     const endpoints: Record<RoadDirection, [number, number]> = {
       north: [48, -24], east: [48, 24], south: [-48, 24], west: [-48, -24],
@@ -28,7 +37,7 @@ export function createTownTile(kind: TownTileKind, roadConnections: RoadDirectio
       const [x, y] = endpoints[direction]
       markings.moveTo(x * 0.2, y * 0.2).lineTo(x * 0.72, y * 0.72)
     })
-    markings.stroke({ color: 0xeee6d1, width: 2, alpha: 0.7 })
+    markings.stroke({ color: p.roadMarking, width: 2, alpha: 0.7 })
     tile.addChild(markings)
   }
   if (kind === "water") {

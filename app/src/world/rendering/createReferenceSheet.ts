@@ -67,7 +67,7 @@ function createBuildings() {
 function overviewSection(sheet: Container) {
   heading(sheet, "Overview", "The rules every World component shares.")
   sectionTitle(sheet, "PALETTE", 0, 96)
-  const swatches = [p.grassLight, 0x626a72, 0xd8cfbd, p.water, p.structure, p.structureMid, p.structureShadow, p.orion, p.spark, p.nexus, p.activeLight]
+  const swatches = [p.grassLight, p.road, p.plaza, p.sidewalk, p.water, p.structure, p.structureMid, p.concrete, p.orion, p.spark, p.nexus, p.activeLight]
   swatches.forEach((color, index) => sheet.addChild(new Graphics().roundRect(index * 52, 122, 40, 40, 9).fill(color)))
   sectionTitle(sheet, "PROJECTION · 96 × 48", 0, 205)
   const tile = createTownTile("grass"); tile.position.set(70, 270)
@@ -175,7 +175,7 @@ function compactHeading(sheet: Container, title: string, subtitle: string) {
 function compactOverview(sheet: Container) {
   compactHeading(sheet, "Overview", "One visual grammar for the World.")
   sectionTitle(sheet, "PALETTE", 0, 82)
-  const colors = [p.grassLight, 0x626a72, 0xd8cfbd, p.water, p.structure, p.structureMid, p.structureShadow, p.orion, p.spark, p.nexus, p.activeLight]
+  const colors = [p.grassLight, p.road, p.plaza, p.sidewalk, p.water, p.structure, p.structureMid, p.concrete, p.orion, p.spark, p.nexus, p.activeLight]
   colors.forEach((color, index) => sheet.addChild(new Graphics().roundRect((index % 6) * 52, 108 + Math.floor(index / 6) * 50, 40, 40, 8).fill(color)))
   sectionTitle(sheet, "PROJECTION & SCALE", 0, 230)
   const tile = createTownTile("grass"); tile.position.set(62, 300)
