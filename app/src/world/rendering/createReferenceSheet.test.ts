@@ -1,12 +1,14 @@
 import { Container } from "pixi.js"
 import { describe, expect, it } from "vitest"
 import { buildingModuleKinds, projectStages, projectStatuses, roofFeatureKinds } from "../../data/types"
+import { visualTokens as tokens } from "../../design/visualTokens"
 import { createBuildingModule, createRoofFeature } from "../entities/buildingParts"
 import { createProjectStageTreatment } from "../entities/createProjectStageTreatment"
 import { createProjectStatusEffect } from "../entities/createProjectStatusEffect"
 import {
   createTownBench,
   createTownBridge,
+  createTownCurb,
   createTownEdge,
   createTownFlowerPatch,
   createTownLamp,
@@ -18,9 +20,11 @@ import {
   createTownTree,
 } from "../entities/townComponents"
 import { catalogSections, createReferenceSheet } from "./createReferenceSheet"
+import { createContactShadow } from "./isometricPrimitives"
 import { createTownEnvironment } from "./createTownEnvironment"
 import { createLayoutDebugOverlay } from "../layout/createLayoutDebugOverlay"
-import { shipyardZeroLayout } from "../layout/townLayout"
+import { shipyardZeroLayout, validateTownLayout, type TownLayout } from "../layout/townLayout"
+import { gridToScreen } from "../projection/isometric"
 import { projects } from "../../data/loadProjects"
 
 type FactorySpec = {
@@ -37,6 +41,9 @@ const productionFactories: FactorySpec[] = [
   { name: "terrain/water", create: () => createTownTile("water") },
   { name: "terrain/bank-north", create: () => createTownEdge("north") },
   { name: "terrain/bank-east", create: () => createTownEdge("east") },
+  { name: "terrain/curb-road", create: () => createTownCurb({ edges: ["north", "east", "south", "west"] }) },
+  { name: "terrain/curb-plaza", create: () => createTownCurb({ edges: ["north", "west"], surface: "plaza" }) },
+  { name: "terrain/curb-path", create: () => createTownCurb({ edges: ["south"], surface: "path" }) },
   { name: "terrain/bridge-x", create: () => createTownBridge("x") },
   { name: "terrain/bridge-y", create: () => createTownBridge("y") },
   { name: "prop/tree", create: createTownTree },
@@ -57,6 +64,7 @@ const productionFactories: FactorySpec[] = [
   })),
   ...buildingModuleKinds.map((module) => ({ name: `module/${module}`, create: () => createBuildingModule(module, 0x6c7bd9) })),
   ...roofFeatureKinds.map((roof) => ({ name: `roof/${roof}`, create: () => createRoofFeature(roof, 0x6c7bd9) })),
+  { name: "shadow/contact", create: () => createContactShadow(96, 48) },
   { name: "layout/environment", create: () => createTownEnvironment(shipyardZeroLayout) },
   { name: "layout/debug", create: () => createLayoutDebugOverlay(shipyardZeroLayout, projects) },
 ]
@@ -108,7 +116,12 @@ describe("Visual system production contract", () => {
       "bench",
       "project-sign",
       "bridge-x",
+      "tile-path",
+      "curb-road",
+      "curb-plaza",
+      "curb-path",
       "flower-patch",
+      "contact-shadow",
       "orion",
       "spark",
       "nexus",
@@ -135,5 +148,173 @@ describe("Visual system production contract", () => {
     expect(compact.artboard).toEqual({ width: 350, height: 720 })
     wide.container.destroy({ children: true })
     compact.container.destroy({ children: true })
+  })
+})
+
+describe("Isometric contact shadow", () => {
+  it("displaces the shadow toward the lower-right in both axes", () => {
+    const width = 96
+    const depth = 48
+    const shadow = createContactShadow(width, depth)
+    const bounds = shadow.getLocalBounds()
+
+    expect(tokens.shadow.direction).toBe("lower-right")
+    // Relative to the footprint centre the shadow reaches further right and further down than up-left.
+    expect(bounds.maxX).toBeGreaterThan(-bounds.minX)
+    expect(bounds.maxY).toBeGreaterThan(-bounds.minY)
+    expect((bounds.minX + bounds.maxX) / 2).toBeGreaterThan(0)
+    expect((bounds.minY + bounds.maxY) / 2).toBeGreaterThan(0)
+    // It also clears the footprint on that side, so the mass never hides its own shadow.
+    expect(bounds.maxX).toBeGreaterThan(width / 2)
+    expect(bounds.maxY).toBeGreaterThan(depth / 2)
+
+    shadow.destroy({ children: true })
+  })
+
+  it("keeps the 2:1 footprint it grounds without rotating off the grid", () => {
+    const width = tokens.projection.tileWidth * 2
+    const depth = tokens.projection.tileHeight * 2
+    const shadow = createContactShadow(width, depth)
+    const bounds = shadow.getLocalBounds()
+
+    expect((bounds.maxX - bounds.minX) / (bounds.maxY - bounds.minY)).toBeCloseTo(2)
+    expect((bounds.maxX - bounds.minX) / width).toBeCloseTo((bounds.maxY - bounds.minY) / depth)
+    expect(bounds.maxX - bounds.minX).toBeGreaterThan(width)
+    expect(shadow.children.every((child) => child.rotation === 0)).toBe(true)
+
+    shadow.destroy({ children: true })
+  })
+
+  it("draws a tighter core on the contact token over a softer cast on the cast token", () => {
+    const shadow = createContactShadow(120, 60)
+    const [cast, core] = shadow.children
+    const spread = (node: typeof cast) => node.getLocalBounds().maxX - node.getLocalBounds().minX
+
+    expect(shadow.label).toBe("contact-shadow")
+    expect(cast.alpha).toBe(tokens.shadow.castAlpha)
+    expect(core.alpha).toBe(tokens.shadow.contactAlpha)
+    expect(core.alpha).toBeGreaterThan(cast.alpha)
+    expect(spread(core)).toBeLessThan(spread(cast))
+    expect(core.position.x).toBeGreaterThan(0)
+    expect(core.position.x).toBeLessThan(cast.position.x)
+    expect(core.position.y).toBeGreaterThan(0)
+    expect(core.position.y).toBeLessThan(cast.position.y)
+
+    shadow.destroy({ children: true })
+  })
+
+  it("lets a caller override the offset and both alphas", () => {
+    const shadow = createContactShadow(96, 48, { offset: { x: 20, y: 10 }, alpha: 0.4, contactAlpha: 0.5 })
+    const [cast, core] = shadow.children
+
+    expect(cast.alpha).toBe(0.4)
+    expect(core.alpha).toBe(0.5)
+    expect([cast.position.x, cast.position.y]).toEqual([20, 10])
+    expect(core.position.x).toBeCloseTo(9)
+    expect(core.position.y).toBeCloseTo(4.5)
+
+    shadow.destroy({ children: true })
+  })
+})
+
+const curbProbeLayout: TownLayout = {
+  id: "curb-probe",
+  width: 5,
+  height: 5,
+  roads: [1, 2, 3].flatMap((x) => [1, 2, 3].map((y) => ({ x, y }))),
+  plazas: [],
+  paths: [],
+  water: [],
+  bridges: [],
+  decor: [],
+  routes: [],
+}
+
+describe("Town curbs", () => {
+  it("kerbs paved cells only where the surface class changes", () => {
+    validateTownLayout(curbProbeLayout)
+    const terrain = createTownEnvironment(curbProbeLayout).getChildByLabel("layout-terrain")!
+    const curbs = terrain.children.filter((child) => child.label === "curb-road").map((child) => `${child.x},${child.y}`)
+    const cell = (x: number, y: number) => { const screen = gridToScreen({ x, y }); return `${screen.x},${screen.y}` }
+
+    expect(curbs).toHaveLength(8)
+    expect(curbs).toContain(cell(1, 1))
+    expect(curbs).not.toContain(cell(2, 2))
+  })
+
+  it("kerbs every paved surface of the production town", () => {
+    const environment = createTownEnvironment(shipyardZeroLayout)
+
+    expect(descendantLabels(environment)).toEqual(expect.arrayContaining(["curb-road", "curb-plaza", "curb-path"]))
+
+    environment.destroy({ children: true })
+  })
+
+  it("gives a road and plaza boundary one curb, owned by the raised surface", () => {
+    const terrain = createTownEnvironment(shipyardZeroLayout).getChildByLabel("layout-terrain")!
+    const at = (x: number, y: number) => {
+      const screen = gridToScreen({ x, y })
+      return terrain.children.filter((child) => child.label?.startsWith("curb-") && child.x === screen.x && child.y === screen.y).map((child) => child.label)
+    }
+
+    // (7,5) plaza carries the lip down to the (7,4) asphalt, which stays flush on that edge.
+    expect(at(7, 5)).toEqual(["curb-plaza"])
+    // (7,4) road touches road on three sides and that plaza on the fourth, so it owns no boundary.
+    expect(at(7, 4)).toEqual([])
+    // A road cell that genuinely borders open ground still gets its own retaining lip.
+    expect(at(1, 4)).toEqual(["curb-road"])
+  })
+
+  it("leaves water boundaries to the bank treatment instead of kerbing them", () => {
+    const terrain = createTownEnvironment(shipyardZeroLayout).getChildByLabel("layout-terrain")!
+    const bridge = gridToScreen({ x: 4, y: 4 })
+    const curbs = terrain.children.filter((child) => child.label?.startsWith("curb-") && child.x === bridge.x && child.y === bridge.y)
+
+    expect(curbs).toHaveLength(0)
+  })
+
+  it("gives a road and sidewalk boundary one curb, owned by the sidewalk", () => {
+    const terrain = createTownEnvironment(shipyardZeroLayout).getChildByLabel("layout-terrain")!
+    const at = (x: number, y: number) => {
+      const screen = gridToScreen({ x, y })
+      return terrain.children.filter((child) => child.label?.startsWith("curb-") && child.x === screen.x && child.y === screen.y).map((child) => child.label)
+    }
+
+    // (6,5) is a sidewalk boxed in by asphalt west and north and plaza east and south, so the
+    // sidewalk owns exactly those two level changes and nothing else.
+    expect(at(6, 5)).toEqual(["curb-path"])
+    // (5,5) is the road on the far side of that western edge: same boundary, no second lip.
+    expect(at(5, 5)).toEqual([])
+  })
+
+  it("raises the curb by the projection token rather than a literal height", () => {
+    const standard = createTownCurb({ edges: ["north"] })
+    const doubled = createTownCurb({ edges: ["north"], height: tokens.projection.curbHeight * 2 })
+
+    expect(standard.getLocalBounds().minY).toBeCloseTo(-tokens.projection.tileHeight / 2 - 0.25 - tokens.projection.curbHeight)
+    expect(doubled.getLocalBounds().minY).toBeCloseTo(standard.getLocalBounds().minY - tokens.projection.curbHeight)
+
+    standard.destroy({ children: true })
+    doubled.destroy({ children: true })
+  })
+})
+
+describe("Town sidewalks", () => {
+  it("renders the manifest path cells as sidewalk tiles", () => {
+    const terrain = createTownEnvironment(shipyardZeroLayout).getChildByLabel("layout-terrain")!
+    const sidewalks = terrain.children.filter((child) => child.label === "tile-path").map((child) => `${child.x},${child.y}`)
+    const expected = shipyardZeroLayout.paths.map((grid) => { const screen = gridToScreen(grid); return `${screen.x},${screen.y}` })
+
+    expect(sidewalks.length).toBeGreaterThan(0)
+    expect(sidewalks.sort()).toEqual(expected.sort())
+  })
+
+  it("connects Orion's plot to the pedestrian network", () => {
+    const orion = projects.find(({ id }) => id === "orion")!
+    const paths = new Set(shipyardZeroLayout.paths.map(({ x, y }) => `${x},${y}`))
+    const neighbors = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => `${orion.grid.x + dx},${orion.grid.y + dy}`)
+
+    expect(orion.grid).toEqual({ x: 2, y: 6 })
+    expect(neighbors.filter((cell) => paths.has(cell))).not.toHaveLength(0)
   })
 })

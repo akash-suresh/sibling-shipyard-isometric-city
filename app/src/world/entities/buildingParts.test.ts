@@ -31,4 +31,13 @@ describe("data-driven building parts", () => {
     expect(parts).not.toContain("module-sky-wing")
     expect(parts).not.toContain("roof-antenna")
   })
+
+  it("grounds each cantilevered sky-wing with its own contact shadow", () => {
+    const core = createTownBuilding(tower(["tower-floor"], undefined), () => undefined).container
+    const winged = createTownBuilding(tower(["tower-floor", "sky-wing"], undefined), () => undefined).container
+    const shadows = (root: Container) => labels(root).filter((part) => part === "contact-shadow").length
+
+    expect(shadows(core)).toBe(1)
+    expect(shadows(winged)).toBe(2)
+  })
 })

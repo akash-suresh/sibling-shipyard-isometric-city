@@ -12,6 +12,7 @@ describe("town layout contract", () => {
     expect(shipyardZeroLayout.roads).toHaveLength(14)
     expect(shipyardZeroLayout.water).toHaveLength(8)
     expect(shipyardZeroLayout.decor).toHaveLength(22)
+    expect(shipyardZeroLayout.paths.length).toBeGreaterThan(0)
   })
 
   it("expands only orthogonal route segments", () => {
@@ -26,6 +27,17 @@ describe("town layout contract", () => {
     expect(() => validateTownLayout(outside)).toThrow("outside the map")
     const unknown = clone(); unknown.decor[0].kind = "statue" as never
     expect(() => validateTownLayout(unknown)).toThrow("Unknown town decor")
+  })
+
+  it("holds sidewalk paths to the same bounds and overlap rules as roads and water", () => {
+    const outside = clone(); outside.paths.push({ x: 0, y: 42 })
+    expect(() => validateTownLayout(outside)).toThrow("outside the map")
+    const onRoad = clone(); onRoad.paths.push({ ...onRoad.roads[0] })
+    expect(() => validateTownLayout(onRoad)).toThrow("overlapping surfaces")
+    const onPlaza = clone(); onPlaza.paths.push({ ...onPlaza.plazas[0] })
+    expect(() => validateTownLayout(onPlaza)).toThrow("overlapping surfaces")
+    const onWater = clone(); onWater.paths.push({ ...onWater.water[0] })
+    expect(() => validateTownLayout(onWater)).toThrow("overlapping surfaces")
   })
 
   it("rejects invalid bridges and actor routes", () => {

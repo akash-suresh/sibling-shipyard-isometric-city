@@ -7,8 +7,8 @@ import { createProjectBuilding } from "../entities/createProjectBuilding"
 import { createBuildingModule, createRoofFeature } from "../entities/buildingParts"
 import { createProjectStageTreatment } from "../entities/createProjectStageTreatment"
 import { createProjectStatusEffect } from "../entities/createProjectStatusEffect"
-import { createTownBench, createTownBridge, createTownEdge, createTownFlowerPatch, createTownLamp, createTownPerson, createTownServiceVehicle, createTownShrub, createTownSign, createTownTile, createTownTree } from "../entities/townComponents"
-import { createIsoPrism } from "./isometricPrimitives"
+import { createTownBench, createTownBridge, createTownCurb, createTownEdge, createTownFlowerPatch, createTownLamp, createTownPerson, createTownServiceVehicle, createTownShrub, createTownSign, createTownTile, createTownTree, type PavedSurface, type RoadDirection } from "../entities/townComponents"
+import { createContactShadow, createIsoPrism } from "./isometricPrimitives"
 import { createTownEnvironment } from "./createTownEnvironment"
 import { shipyardZeroLayout } from "../layout/townLayout"
 import { createLayoutDebugOverlay } from "../layout/createLayoutDebugOverlay"
@@ -23,6 +23,19 @@ export const catalogArtboards = { wide: { width: 800, height: 620 }, compact: { 
 
 const p = tokens.palette
 const catalogMilestone = milestoneData[0] as MilestoneDefinition
+const curbSurfaces: PavedSurface[] = ["road", "plaza", "path"]
+const curbRim: RoadDirection[] = ["north", "east", "south", "west"]
+
+/** Counted from the manifest so the printed catalog statistics can never drift from the World. */
+const manifest = {
+  tiles: shipyardZeroLayout.width * shipyardZeroLayout.height,
+  roads: shipyardZeroLayout.roads.length,
+  paths: shipyardZeroLayout.paths.length,
+  water: shipyardZeroLayout.water.length,
+  props: shipyardZeroLayout.decor.length,
+  plots: projects.length,
+  routes: shipyardZeroLayout.routes.length,
+}
 
 function label(text: string, x: number, y: number, size = 15, color: number = p.ink) {
   const node = new Text({ text, style: { fill: color, fontFamily: "Inter, sans-serif", fontSize: size, fontWeight: "600" } })
@@ -64,10 +77,21 @@ function createBuildings() {
   }
 }
 
+const shadowCaption = `contact-shadow · cast ${Math.round(tokens.shadow.castAlpha * 100)}% + core ${Math.round(tokens.shadow.contactAlpha * 100)}%`
+
+/** One mass over its own production shadow, so the light rule is shown rather than only written. */
+function shadowSpecimen(width: number, depth: number, height: number, x: number, groundY: number) {
+  const group = new Container()
+  group.position.set(x, groundY)
+  const mass = createIsoPrism(width, depth, height, { top: p.structure, left: p.structureMid, right: p.structureShadow })
+  group.addChild(createContactShadow(width, depth), mass)
+  return group
+}
+
 function overviewSection(sheet: Container) {
   heading(sheet, "Overview", "The rules every World component shares.")
   sectionTitle(sheet, "PALETTE", 0, 96)
-  const swatches = [p.grassLight, 0x626a72, 0xd8cfbd, p.water, p.structure, p.structureMid, p.structureShadow, p.orion, p.spark, p.nexus, p.activeLight]
+  const swatches = [p.grassLight, p.road, p.plaza, p.sidewalk, p.water, p.structure, p.structureMid, p.concrete, p.orion, p.spark, p.nexus, p.activeLight]
   swatches.forEach((color, index) => sheet.addChild(new Graphics().roundRect(index * 52, 122, 40, 40, 9).fill(color)))
   sectionTitle(sheet, "PROJECTION · 96 × 48", 0, 205)
   const tile = createTownTile("grass"); tile.position.set(70, 270)
@@ -77,25 +101,34 @@ function overviewSection(sheet: Container) {
   sheet.addChild(card(createTownPerson(), "person · 18 px", 390, 305), card(createTownTree(), "tree · 42 px", 530, 305), card(createTownServiceVehicle(), "vehicle · 54 px", 680, 305, 0.9))
   sectionTitle(sheet, "LOCKED RULES", 0, 400)
   sheet.addChild(label("Upper-left light", 0, 435, 13), label("Lower-right shadow · 16%", 0, 465, 13), label("Ground-contact center anchors", 270, 435, 13), label("Important detail ≥ 3 px", 270, 465, 13), label("Stage ≠ status ≠ milestone", 560, 435, 13), label("One Pixi motion clock", 560, 465, 13))
+  sectionTitle(sheet, "SHADOW & LIGHT", 0, 500)
+  sheet.addChild(shadowSpecimen(64, 32, 36, 96, 580), label(shadowCaption, 190, 545, 12), label("Nested isometric diamonds offset lower-right", 190, 573, 12))
 }
 
 function terrainSection(sheet: Container) {
   heading(sheet, "Terrain", "Connected tiles, water edges, and crossings.")
-  sectionTitle(sheet, "SURFACES", 0, 94)
+  sectionTitle(sheet, "SURFACES", 0, 84)
   const kinds = ["grass", "grass-accent", "road", "plaza", "path", "water"] as const
   kinds.forEach((kind, index) => {
-    const tile = createTownTile(kind, kind === "road" ? ["north", "south"] : []); tile.position.set(64 + index * 130, 165)
-    sheet.addChild(tile, label(kind, 30 + index * 130, 200, 10))
+    const tile = createTownTile(kind, kind === "road" ? ["north", "south"] : []); tile.position.set(64 + index * 130, 148)
+    sheet.addChild(tile, label(kind, 30 + index * 130, 180, 10))
     if (kind === "water") { const edge = createTownEdge("east"); edge.position.copyFrom(tile.position); sheet.addChild(edge) }
   })
-  sectionTitle(sheet, "ROAD CONNECTIONS", 0, 270)
+  sectionTitle(sheet, "ROAD CONNECTIONS", 0, 212)
   const variants = [{ name: "terminus", connections: ["north"] }, { name: "straight", connections: ["north", "south"] }, { name: "corner", connections: ["north", "east"] }, { name: "junction", connections: ["north", "east", "south"] }] as const
-  variants.forEach((variant, index) => { const tile = createTownTile("road", [...variant.connections]); tile.position.set(80 + index * 180, 345); sheet.addChild(tile, label(variant.name, 48 + index * 180, 380, 10)) })
-  sectionTitle(sheet, "WATER & EDGES", 0, 445)
-  const water = createTownTile("water"); water.position.set(70, 525)
+  variants.forEach((variant, index) => { const tile = createTownTile("road", [...variant.connections]); tile.position.set(80 + index * 180, 276); sheet.addChild(tile, label(variant.name, 48 + index * 180, 308, 10)) })
+  sectionTitle(sheet, "CURBS", 0, 340)
+  curbSurfaces.forEach((surface, index) => {
+    const tile = createTownTile(surface, surface === "road" ? ["north", "south"] : [])
+    const curb = createTownCurb({ edges: [...curbRim], surface })
+    tile.position.set(130 + index * 270, 404); curb.position.copyFrom(tile.position)
+    sheet.addChild(tile, curb, label(`curb-${surface}`, 98 + index * 270, 436, 10))
+  })
+  sectionTitle(sheet, "WATER & EDGES", 0, 468)
+  const water = createTownTile("water"); water.position.set(70, 548)
   const northBank = createTownEdge("north"); northBank.position.copyFrom(water.position)
   const eastBank = createTownEdge("east"); eastBank.position.copyFrom(water.position)
-  sheet.addChild(water, northBank, eastBank, card(createTownBridge("x"), "bridge · x", 260, 525, 0.86), card(createTownBridge("y"), "bridge · y", 460, 525, 0.86), card(createTownFlowerPatch(), "bank flowers", 650, 525))
+  sheet.addChild(water, northBank, eastBank, card(createTownBridge("x"), "bridge · x", 260, 548, 0.86), card(createTownBridge("y"), "bridge · y", 460, 548, 0.86), card(createTownFlowerPatch(), "bank flowers", 650, 548))
 }
 
 function buildingsSection(sheet: Container) {
@@ -116,7 +149,8 @@ function layoutSection(sheet: Container) {
   preview.addChild(createTownEnvironment(shipyardZeroLayout), createLayoutDebugOverlay(shipyardZeroLayout, projects))
   sheet.addChild(preview)
   sectionTitle(sheet, "LAYOUT DEBUG", 585, 105)
-  sheet.addChild(label("90 tiles", 585, 140, 12), label("14 road cells", 585, 170, 12), label("8 water cells", 585, 200, 12), label("22 prop anchors", 585, 230, 12), label("3 project plots", 585, 260, 12), label("2 actor routes", 585, 290, 12))
+  const stats = [`${manifest.tiles} tiles`, `${manifest.roads} road cells`, `${manifest.paths} sidewalk cells`, `${manifest.water} water cells`, `${manifest.props} prop anchors`, `${manifest.plots} project plots`, `${manifest.routes} actor routes`]
+  stats.forEach((text, index) => sheet.addChild(label(text, 585, 140 + index * 28, 12)))
   sheet.addChild(label("◇ grid", 585, 350, 11), label("＋ prop anchor", 585, 380, 11), label("◆ project footprint", 585, 410, 11), label("— walker route", 585, 440, 11), label("0 conflicts", 585, 500, 12, 0x4c7451))
   sheet.addChild(label("Authored → validated → rendered", 0, 575, 11))
 }
@@ -175,7 +209,7 @@ function compactHeading(sheet: Container, title: string, subtitle: string) {
 function compactOverview(sheet: Container) {
   compactHeading(sheet, "Overview", "One visual grammar for the World.")
   sectionTitle(sheet, "PALETTE", 0, 82)
-  const colors = [p.grassLight, 0x626a72, 0xd8cfbd, p.water, p.structure, p.structureMid, p.structureShadow, p.orion, p.spark, p.nexus, p.activeLight]
+  const colors = [p.grassLight, p.road, p.plaza, p.sidewalk, p.water, p.structure, p.structureMid, p.concrete, p.orion, p.spark, p.nexus, p.activeLight]
   colors.forEach((color, index) => sheet.addChild(new Graphics().roundRect((index % 6) * 52, 108 + Math.floor(index / 6) * 50, 40, 40, 8).fill(color)))
   sectionTitle(sheet, "PROJECTION & SCALE", 0, 230)
   const tile = createTownTile("grass"); tile.position.set(62, 300)
@@ -183,19 +217,28 @@ function compactOverview(sheet: Container) {
   sheet.addChild(tile, block, card(createTownPerson(), "person", 285, 305))
   sectionTitle(sheet, "LOCKED RULES", 0, 400)
   sheet.addChild(label("Upper-left light · lower-right shadow", 0, 435, 12), label("96 × 48 grid · ground-center anchors", 0, 468, 12), label("Stage ≠ status ≠ milestone", 0, 501, 12), label("One ticker · reduced-motion pose", 0, 534, 12), label("Important detail ≥ 3 px", 0, 567, 12))
+  sectionTitle(sheet, "SHADOW & LIGHT", 0, 606)
+  sheet.addChild(shadowSpecimen(56, 28, 30, 52, 690), label(shadowCaption, 110, 668, 11), label("Nested iso diamonds, no rotation", 110, 692, 11))
 }
 
 function compactTerrain(sheet: Container) {
   compactHeading(sheet, "Terrain", "Surfaces, roads, water, and bridges.")
-  sectionTitle(sheet, "SURFACES", 0, 78)
+  sectionTitle(sheet, "SURFACES", 0, 70)
   const kinds = ["grass", "grass-accent", "road", "plaza", "path", "water"] as const
-  kinds.forEach((kind, index) => { const tile = createTownTile(kind, kind === "road" ? ["north", "south"] : []); const x = 58 + (index % 3) * 116; const y = 145 + Math.floor(index / 3) * 105; tile.position.set(x, y); sheet.addChild(tile, label(kind, x - 35, y + 34, 9)); if (kind === "water") { const edge = createTownEdge("east"); edge.position.copyFrom(tile.position); sheet.addChild(edge) } })
-  sectionTitle(sheet, "ROAD GRAMMAR", 0, 320)
+  kinds.forEach((kind, index) => { const tile = createTownTile(kind, kind === "road" ? ["north", "south"] : []); const x = 58 + (index % 3) * 116; const y = 128 + Math.floor(index / 3) * 92; tile.position.set(x, y); sheet.addChild(tile, label(kind, x - 35, y + 32, 9)); if (kind === "water") { const edge = createTownEdge("east"); edge.position.copyFrom(tile.position); sheet.addChild(edge) } })
+  sectionTitle(sheet, "ROAD GRAMMAR", 0, 276)
   const roads = [["terminus", ["north"]], ["straight", ["north", "south"]], ["corner", ["north", "east"]], ["junction", ["north", "east", "south"]]] as const
-  roads.forEach(([name, connections], index) => { const tile = createTownTile("road", [...connections]); const x = 85 + (index % 2) * 180; const y = 385 + Math.floor(index / 2) * 105; tile.position.set(x, y); sheet.addChild(tile, label(name, x - 32, y + 34, 9)) })
-  sectionTitle(sheet, "WATER KIT", 0, 565)
-  const water = createTownTile("water"); water.position.set(60, 635); const bank = createTownEdge("north"); bank.position.copyFrom(water.position)
-  sheet.addChild(water, bank, card(createTownBridge("x"), "bridge x", 180, 635, 0.7), card(createTownBridge("y"), "bridge y", 300, 635, 0.7))
+  roads.forEach(([name, connections], index) => { const tile = createTownTile("road", [...connections]); const x = 85 + (index % 2) * 180; const y = 334 + Math.floor(index / 2) * 92; tile.position.set(x, y); sheet.addChild(tile, label(name, x - 32, y + 32, 9)) })
+  sectionTitle(sheet, "CURBS", 0, 482)
+  curbSurfaces.forEach((surface, index) => {
+    const tile = createTownTile(surface, surface === "road" ? ["north", "south"] : [])
+    const curb = createTownCurb({ edges: [...curbRim], surface })
+    const x = 58 + index * 116; tile.position.set(x, 540); curb.position.copyFrom(tile.position)
+    sheet.addChild(tile, curb, label(`curb-${surface}`, x - 35, 572, 9))
+  })
+  sectionTitle(sheet, "WATER KIT", 0, 596)
+  const water = createTownTile("water"); water.position.set(60, 656); const bank = createTownEdge("north"); bank.position.copyFrom(water.position)
+  sheet.addChild(water, bank, card(createTownBridge("x"), "bridge x", 180, 656, 0.7), card(createTownBridge("y"), "bridge y", 300, 656, 0.7))
 }
 
 function compactBuildings(sheet: Container) {
@@ -215,7 +258,7 @@ function compactLayout(sheet: Container) {
   const preview = new Container(); preview.position.set(175, 185); preview.scale.set(0.34)
   preview.addChild(createTownEnvironment(shipyardZeroLayout), createLayoutDebugOverlay(shipyardZeroLayout, projects)); sheet.addChild(preview)
   sectionTitle(sheet, "PRODUCTION MANIFEST", 0, 380)
-  sheet.addChild(label("90 tiles · 14 roads · 8 water", 0, 415, 12), label("22 prop anchors · 3 project plots", 0, 450, 12), label("2 validated actor routes", 0, 485, 12), label("◇ grid    ＋ anchor", 0, 545, 11), label("◆ footprint    — route", 0, 580, 11), label("0 conflicts", 0, 640, 12, 0x4c7451))
+  sheet.addChild(label(`${manifest.tiles} tiles · ${manifest.roads} roads · ${manifest.water} water`, 0, 415, 12), label(`${manifest.paths} sidewalks · ${manifest.props} prop anchors`, 0, 450, 12), label(`${manifest.plots} project plots · ${manifest.routes} validated routes`, 0, 485, 12), label("◇ grid    ＋ anchor", 0, 545, 11), label("◆ footprint    — route", 0, 580, 11), label("0 conflicts", 0, 640, 12, 0x4c7451))
 }
 
 function compactProps(sheet: Container) {

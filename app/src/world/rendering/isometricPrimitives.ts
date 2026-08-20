@@ -1,4 +1,5 @@
-import { Container, Graphics } from "pixi.js"
+import { Container, Graphics, type PointData } from "pixi.js"
+import { visualTokens as tokens } from "../../design/visualTokens"
 
 export interface IsoFaceColors {
   top: number
@@ -32,8 +33,35 @@ export function createIsoDiamond(width: number, depth: number, fill: number, str
   return shape
 }
 
-export function createCastShadow(width: number, height: number, color: number, alpha: number) {
-  const shadow = new Graphics().ellipse(14, 8, width, height).fill({ color, alpha })
-  shadow.rotation = -0.12
+export interface ContactShadowOptions {
+  offset?: PointData
+  alpha?: number
+  contactAlpha?: number
+}
+
+/** Lower-right along the tile's east axis, so the displacement itself keeps the 2:1 projection. */
+const contactShadowOffset: PointData = { x: 12, y: 6 }
+/** The soft cast spreads past the footprint; the darker core stays at footprint size and barely leaves the mass. */
+const castSpread = 1.14
+const contactCoreOffset = 0.45
+
+/**
+ * The ground shadow for one isometric mass: a soft cast diamond displaced toward the
+ * lower-right plus a darker core that hugs the footprint, so the mass grips the ground.
+ */
+export function createContactShadow(width: number, depth: number, options: ContactShadowOptions = {}): Container {
+  const { offset = contactShadowOffset, alpha = tokens.shadow.castAlpha, contactAlpha = tokens.shadow.contactAlpha } = options
+  const shadow = new Container()
+  shadow.label = "contact-shadow"
+
+  const cast = createIsoDiamond(width * castSpread, depth * castSpread, tokens.palette.castShadow)
+  cast.position.set(offset.x, offset.y)
+  cast.alpha = alpha
+
+  const core = createIsoDiamond(width, depth, tokens.palette.castShadow)
+  core.position.set(offset.x * contactCoreOffset, offset.y * contactCoreOffset)
+  core.alpha = contactAlpha
+
+  shadow.addChild(cast, core)
   return shadow
 }
