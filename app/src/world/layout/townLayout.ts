@@ -49,8 +49,6 @@ export const shipyardZeroLayout: TownLayout = {
     ...Array.from({ length: 24 }, (_, index) => point(12, index)).filter(p => p.y !== 12), // Vertical road
   ],
   plazas: [
-    // Central Monument Plaza
-    ...Array.from({ length: 5 }, (_, x) => Array.from({ length: 5 }, (_, y) => point(7 + x, 6 + y))).flat(),
     // Nexus Plaza
     point(14, 4), point(15, 4), point(16, 4),
     point(14, 6), point(15, 6), point(16, 6),
