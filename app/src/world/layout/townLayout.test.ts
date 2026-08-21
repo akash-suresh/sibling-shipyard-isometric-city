@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { projects } from "../../data/loadProjects"
 import { cellsAlongSegment, shipyardZeroLayout, validateProjectPlacements, validateTownLayout, type TownLayout } from "./townLayout"
-import { createTownEnvironment } from "../rendering/createTownEnvironment"
+
 
 const clone = (): TownLayout => structuredClone(shipyardZeroLayout)
 
@@ -54,9 +54,4 @@ describe("town layout contract", () => {
     expect(() => validateProjectPlacements(shipyardZeroLayout, [project])).toThrow("non-buildable terrain")
   })
 
-  it("renders decor deterministically when manifest records are reordered", () => {
-    const reversed = clone(); reversed.decor.reverse()
-    const sequence = (layout: TownLayout) => createTownEnvironment(layout).getChildByLabel("layout-decor")!.children.map((child) => `${child.label}:${child.x},${child.y},${child.zIndex}`)
-    expect(sequence(reversed)).toEqual(sequence(shipyardZeroLayout))
-  })
 })

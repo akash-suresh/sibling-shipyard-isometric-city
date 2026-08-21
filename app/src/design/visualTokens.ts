@@ -1,50 +1,42 @@
-import { defaultProjection } from "../world/projection/isometric"
-
 export const visualTokens = {
-  projection: {
-    tileWidth: defaultProjection.tileWidth,
-    tileHeight: defaultProjection.tileHeight,
-    floorHeight: 24,
-    curbHeight: 4,
-  },
   palette: {
     ink: 0x26384d,
     mutedInk: 0x667589,
-    canvas: 0xf2efe7,
-    structure: 0xfffbf0,
-    structureMid: 0xe8e4d9,
-    structureShadow: 0xc9c8c2,
-    grassLight: 0xb7d9a7,
-    grassDark: 0xaed29e,
-    grassSeam: 0x9ac08d,
-    road: 0x626a72,
-    roadSeam: 0x555d65,
-    roadMarking: 0xeee6d1,
-    plaza: 0xd8cfbd,
-    plazaSeam: 0xbfb5a5,
-    sidewalk: 0xc8b996,
-    sidewalkSeam: 0xaea17f,
-    curb: 0xdedbd2,
-    curbFace: 0xbdbab1,
-    concrete: 0xc2c4bf,
-    concreteMid: 0xa6a9a3,
-    concreteShadow: 0x8a8d87,
-    hedge: 0x5b9a46,
-    hedgeShadow: 0x477a36,
-    cliff: 0xd8cba9,
-    soil: 0x7d6a4f,
-    rock: 0x5f5647,
-    water: 0x7fcad0,
-    glass: 0x96c7d8,
-    metal: 0x45536a,
-    castShadow: 0x24364b,
-    crane: 0xe5a84b,
-    craneShadow: 0x9c7841,
-    activeLight: 0xffdf68,
+    canvas: 0xfdfbf7, // Warm, bright cream background
+    structure: 0xffffff, // Stark white for buildings
+    structureMid: 0xf0f2f5,
+    structureShadow: 0xd9dee8, // Cool blueish shadows
+    grassLight: 0x8BC34A, // Saturated synthetic green
+    grassDark: 0x7CB342,
+    grassSeam: 0x689F38,
+    road: 0x4a5568, // Dark blue-grey asphalt
+    roadSeam: 0x2d3748,
+    roadMarking: 0xffffff,
+    plaza: 0xe2e8f0, // Crisp light grey plaza
+    plazaSeam: 0xcbd5e1,
+    sidewalk: 0xf1f5f9,
+    sidewalkSeam: 0xe2e8f0,
+    curb: 0xcbd5e1,
+    curbFace: 0x94a3b8,
+    concrete: 0xf8fafc,
+    concreteMid: 0xe2e8f0,
+    concreteShadow: 0x94a3b8,
+    hedge: 0x4CAF50, // Vivid green for trees/hedges
+    hedgeShadow: 0x388E3C,
+    cliff: 0xd9854c, // Vivid terracotta/orange dirt
+    soil: 0xc87137, // Richer dirt
+    rock: 0x8c6b5d,
+    water: 0x00bcd4, // Glowing cyan water
+    glass: 0x2196f3, // Vivid blue glass
+    metal: 0x64748b,
+    castShadow: 0x1e293b,
+    crane: 0xffeb3b, // Bright primary yellow
+    craneShadow: 0xfbc02d,
+    activeLight: 0xffea00,
     selection: 0x6c7bd9,
-    orion: 0xef8354,
-    spark: 0xf4c95d,
-    nexus: 0x6c7bd9,
+    orion: 0xff5722, // Vivid orange
+    spark: 0xffc107, // Vivid yellow
+    nexus: 0x2962ff, // Vivid blue
   },
   scale: {
     personHeight: 18,

@@ -5,7 +5,7 @@
     "summary": "An ambitious project taking shape in the yard.",
     "stage": "prototype",
     "status": "building",
-    "grid": { "x": 2, "y": 6 },
+    "grid": { "x": 4, "y": 16 },
     "building": {
       "archetype": "workshop",
       "modules": ["lab-floor"],
@@ -21,7 +21,7 @@
     "summary": "A small live product with a bright pulse.",
     "stage": "shipped",
     "status": "live",
-    "grid": { "x": 7, "y": 6 },
+    "grid": { "x": 20, "y": 16 },
     "building": {
       "archetype": "studio",
       "modules": ["office-floor"],
@@ -37,7 +37,7 @@
     "summary": "A growing platform becoming a Shipyard landmark.",
     "stage": "growing",
     "status": "growing",
-    "grid": { "x": 5, "y": 2 },
+    "grid": { "x": 12, "y": 4 },
     "building": {
       "archetype": "tower",
       "modules": ["tower-floor", "tower-floor", "sky-wing"],

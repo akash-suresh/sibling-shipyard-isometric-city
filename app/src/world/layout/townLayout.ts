@@ -1,4 +1,7 @@
-import type { Point } from "../projection/isometric"
+export interface Point {
+  x: number;
+  y: number;
+}
 import type { ProjectDefinition } from "../../data/types"
 
 export type DecorKind = "tree" | "lamp" | "shrub" | "bench" | "flowers" | "sign"
@@ -39,36 +42,96 @@ const point = (x: number, y: number): Point => ({ x, y })
 
 export const shipyardZeroLayout: TownLayout = {
   id: "shipyard-zero",
-  width: 10,
-  height: 9,
+  width: 24,
+  height: 24,
   roads: [
-    ...Array.from({ length: 8 }, (_, index) => point(index + 1, 4)),
-    ...Array.from({ length: 4 }, (_, index) => point(5, index + 5)),
-    point(7, 2), point(7, 3),
+    ...Array.from({ length: 24 }, (_, index) => point(index, 12)), // Horizontal road
+    ...Array.from({ length: 24 }, (_, index) => point(12, index)).filter(p => p.y !== 12), // Vertical road
   ],
-  plazas: [point(2, 5), point(3, 6), point(6, 6), point(7, 5), point(5, 2), point(6, 2)],
-  // Sidewalks only where a pedestrian actually needs one: Orion's frontage walk off the main
-  // road, and the two walker-route cells that would otherwise be grass between paved surfaces.
-  paths: [point(1, 5), point(1, 6), point(3, 5), point(6, 5)],
-  water: Array.from({ length: 9 }, (_, y) => point(4, y)).filter(({ y }) => y !== 4),
-  bridges: [{ grid: point(4, 4), axis: "x" }],
+  plazas: [
+    // Central Monument Plaza
+    ...Array.from({ length: 5 }, (_, x) => Array.from({ length: 5 }, (_, y) => point(14 + x, 14 + y))).flat(),
+    // Nexus Plaza
+    point(12, 4), point(13, 4), point(14, 4),
+    point(12, 6), point(13, 6), point(14, 6),
+    point(13, 5), point(14, 5),
+  ],
+  paths: [
+    // Path to Orion
+    point(4, 13), point(4, 14), point(4, 15),
+    // Path to Spark
+    point(20, 13), point(20, 14), point(20, 15),
+    // Path connecting Nexus to road
+    point(12, 7), point(12, 8), point(12, 9), point(12, 10), point(12, 11)
+  ],
+  water: Array.from({ length: 24 }, (_, y) => point(2, y)).filter(({ y }) => y !== 12),
+  bridges: [{ grid: point(2, 12), axis: "x" }],
   decor: [
-    { kind: "tree", grid: point(0, 4), offset: point(7, -3) }, { kind: "tree", grid: point(1, 2), offset: point(-10, 0) },
-    { kind: "tree", grid: point(3, 1), offset: point(8, -2) }, { kind: "tree", grid: point(7, 1), offset: point(5, -2) },
-    { kind: "tree", grid: point(8, 3), offset: point(-7, 1) }, { kind: "tree", grid: point(8, 7), offset: point(3, 0) },
-    { kind: "tree", grid: point(3, 8), offset: point(-7, 0) }, { kind: "tree", grid: point(1, 7), offset: point(5, 0) },
-    { kind: "lamp", grid: point(3, 5), offset: point(22, -6) }, { kind: "lamp", grid: point(5, 4), offset: point(22, -6) }, { kind: "lamp", grid: point(6, 5), offset: point(22, -6) },
-    { kind: "shrub", grid: point(3, 3), offset: point(-16, 4) }, { kind: "shrub", grid: point(6, 3), offset: point(18, 3) },
-    { kind: "shrub", grid: point(6, 7), offset: point(17, 4) }, { kind: "shrub", grid: point(3, 7), offset: point(-15, 3) },
-    { kind: "bench", grid: point(3, 4), offset: point(-8, -10) }, { kind: "bench", grid: point(7, 4), offset: point(12, 9) },
-    { kind: "flowers", grid: point(3, 2), offset: point(-12, 7), accent: "spark" }, { kind: "flowers", grid: point(5, 7), offset: point(15, 8), accent: "orion" },
-    { kind: "sign", grid: point(3, 6), offset: point(20, -9), accent: "orion" }, { kind: "sign", grid: point(6, 6), offset: point(-20, 7), accent: "spark" },
-    { kind: "sign", grid: point(6, 2), offset: point(16, 5), accent: "nexus" },
+    // Trees along the river
+    { kind: "tree", grid: point(1, 4) }, { kind: "tree", grid: point(1, 10) },
+    { kind: "tree", grid: point(1, 16) }, { kind: "tree", grid: point(1, 20) },
+    { kind: "tree", grid: point(3, 4) }, { kind: "tree", grid: point(3, 10) },
+    { kind: "tree", grid: point(3, 16) }, { kind: "tree", grid: point(3, 20) },
+    // Trees in Nexus plaza
+    { kind: "tree", grid: point(14, 4) }, { kind: "tree", grid: point(14, 6) },
+    // Street lamps
+    { kind: "lamp", grid: point(11, 11) }, { kind: "lamp", grid: point(13, 11) },
+    { kind: "lamp", grid: point(11, 13) }, { kind: "lamp", grid: point(13, 13) },
+    { kind: "lamp", grid: point(8, 11) }, { kind: "lamp", grid: point(16, 11) },
   ],
   routes: [
-    { id: "town-walker", actor: "person", waypoints: [point(3, 5), point(3, 4), point(5, 4), point(5, 5), point(6, 5), point(5, 5), point(5, 4), point(3, 4), point(3, 5)], durationMs: 6200, reducedProgress: 0.35, offset: point(0, -7) },
-    { id: "service-loop", actor: "service-vehicle", waypoints: [point(1, 4), point(8, 4), point(7, 4), point(7, 2), point(7, 4), point(5, 4), point(5, 8), point(5, 4), point(1, 4)], durationMs: 10500, reducedProgress: 0.62, offset: point(0, -5), accent: "orion" },
-  ],
+    {
+      id: "walker-1",
+      actor: "person",
+      waypoints: [point(16, 14), point(16, 12), point(12, 12), point(12, 6), point(13, 6)],
+      durationMs: 25000,
+      reducedProgress: 0.1,
+      offset: point(0, 0),
+    },
+    {
+      id: "walker-2",
+      actor: "person",
+      waypoints: [point(20, 15), point(20, 12), point(14, 12), point(14, 14)],
+      durationMs: 22000,
+      reducedProgress: 0.3,
+      offset: point(-0.2, 0.2),
+    },
+    {
+      id: "walker-3",
+      actor: "person",
+      waypoints: [point(14, 14), point(14, 16), point(16, 16), point(16, 14)],
+      durationMs: 18000,
+      reducedProgress: 0.8,
+      offset: point(0.2, -0.2),
+    },
+    {
+      id: "car-1",
+      actor: "service-vehicle",
+      waypoints: [point(0, 12), point(23, 12)],
+      durationMs: 12000,
+      reducedProgress: 0.5,
+      offset: point(0, 0.25), // drive on the right side of the road
+      accent: "nexus",
+    },
+    {
+      id: "car-2",
+      actor: "service-vehicle",
+      waypoints: [point(23, 12), point(12, 12), point(12, 0)],
+      durationMs: 15000,
+      reducedProgress: 0.8,
+      offset: point(0, -0.25), // drive on the right side
+      accent: "orion",
+    },
+    {
+      id: "car-3",
+      actor: "service-vehicle",
+      waypoints: [point(12, 23), point(12, 12), point(0, 12)],
+      durationMs: 16000,
+      reducedProgress: 0.2,
+      offset: point(0, -0.25), // drive on the right side
+      accent: "spark",
+    }
+  ]
 }
 
 const key = ({ x, y }: Point) => `${x},${y}`

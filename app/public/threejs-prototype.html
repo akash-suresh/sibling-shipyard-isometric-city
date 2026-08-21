@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Isometric Prototype - Orion</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #f0f0f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            pointer-events: none;
+            max-width: 300px;
+            border-left: 4px solid #FFC107;
+            z-index: 10;
+        }
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 1.2rem;
+            color: #333;
+        }
+        h2 {
+            margin: 0 0 10px 0;
+            font-size: 1rem;
+            color: #666;
+            font-weight: 500;
+        }
+        p {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #555;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui-layer">
+        <h1>Three.js Isometric Prototype</h1>
+        <h2>Orion — Under Construction</h2>
+        <p>This is a rendering quality spike comparing Three.js vs PixiJS.</p>
+    </div>
+    <div id="canvas-container"></div>
+
+    <!-- Import Map for Three.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.169.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // 1. Setup Scene, Camera, Renderer
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color('#e0e0e5'); // light warm gray background
+
+        const aspect = window.innerWidth / window.innerHeight;
+        const d = 20; // Frustum size
+        const camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+        
+        // True isometric angle: 35.264° elevation, 45° azimuth
+        // A simple way is to set x, y, z all equal and look at the origin.
+        camera.position.set(20, 20, 20);
+        camera.lookAt(scene.position);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        // 2. Lighting
+        // Soft ambient fill light
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+
+        // Directional light from upper-left (isometric standard)
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        dirLight.position.set(-20, 30, 20); // upper-left relative to our camera
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.left = -25;
+        dirLight.shadow.camera.right = 25;
+        dirLight.shadow.camera.top = 25;
+        dirLight.shadow.camera.bottom = -25;
+        dirLight.shadow.bias = -0.0005;
+        scene.add(dirLight);
+
+        // 3. Materials
+        const grassMat = new THREE.MeshStandardMaterial({ color: 0x4CAF50, roughness: 0.8 });
+        const dirtMat = new THREE.MeshStandardMaterial({ color: 0x795548, roughness: 0.9 });
+        const roadMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.7 });
+        const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
+        const concreteMat = new THREE.MeshStandardMaterial({ color: 0x9E9E9E, roughness: 0.6 });
+        const darkConcreteMat = new THREE.MeshStandardMaterial({ color: 0x616161, roughness: 0.7 });
+        const windowMat = new THREE.MeshStandardMaterial({ color: 0x222222, emissive: 0x332510, emissiveIntensity: 0.8, roughness: 0.2, metalness: 0.8 });
+        const steelMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.4, metalness: 0.6 });
+        const constructionYellowMat = new THREE.MeshStandardMaterial({ color: 0xFFC107, roughness: 0.4, metalness: 0.2 });
+        const scaffoldOrangeMat = new THREE.MeshStandardMaterial({ color: 0xFF9800, roughness: 0.6 });
+        const woodMat = new THREE.MeshStandardMaterial({ color: 0x8D6E63, roughness: 0.8 });
+        const signAccentMat = new THREE.MeshStandardMaterial({ color: 0x00ACC1, roughness: 0.5 });
+        
+        // 4. Ground & Environment
+        const groundGroup = new THREE.Group();
+        scene.add(groundGroup);
+
+        // Main grass platform
+        const islandGeo = new THREE.BoxGeometry(30, 2, 30);
+        // Multi-material for top grass, sides dirt
+        const islandMats = [dirtMat, dirtMat, grassMat, dirtMat, dirtMat, dirtMat];
+        const island = new THREE.Mesh(islandGeo, islandMats);
+        island.position.y = -1;
+        island.receiveShadow = true;
+        groundGroup.add(island);
+
+        // Road
+        const roadGeo = new THREE.BoxGeometry(30.1, 2.05, 8);
+        const road = new THREE.Mesh(roadGeo, roadMat);
+        road.position.set(0, -1, 8);
+        road.receiveShadow = true;
+        groundGroup.add(road);
+
+        // Road stripes
+        for (let i = -12; i <= 12; i += 4) {
+            const stripe = new THREE.Mesh(new THREE.BoxGeometry(2, 0.05, 0.2), whiteMat);
+            stripe.position.set(i, 0.05, 8);
+            stripe.receiveShadow = true;
+            groundGroup.add(stripe);
+        }
+
+        // Sidewalk curbs
+        const curbGeo = new THREE.BoxGeometry(30.1, 2.1, 0.5);
+        const curb1 = new THREE.Mesh(curbGeo, whiteMat);
+        curb1.position.set(0, -1, 3.75);
+        curb1.receiveShadow = true;
+        groundGroup.add(curb1);
+        
+        const curb2 = new THREE.Mesh(curbGeo, whiteMat);
+        curb2.position.set(0, -1, 12.25);
+        curb2.receiveShadow = true;
+        groundGroup.add(curb2);
+
+        // Trees
+        function createTree(x, z) {
+            const tree = new THREE.Group();
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 2), dirtMat);
+            trunk.position.y = 1;
+            trunk.castShadow = true;
+            trunk.receiveShadow = true;
+            tree.add(trunk);
+
+            const canopy1 = new THREE.Mesh(new THREE.SphereGeometry(1.2, 8, 8), grassMat);
+            canopy1.position.y = 2.5;
+            canopy1.castShadow = true;
+            canopy1.receiveShadow = true;
+            tree.add(canopy1);
+
+            tree.position.set(x, 0, z);
+            return tree;
+        }
+        groundGroup.add(createTree(-10, -8));
+        groundGroup.add(createTree(12, -10));
+        groundGroup.add(createTree(8, 14));
+        groundGroup.add(createTree(-12, 13));
+
+        // 5. Orion Building Construction Site
+        const siteGroup = new THREE.Group();
+        siteGroup.position.set(0, 0, -4);
+        scene.add(siteGroup);
+
+        // Completed Lower Floors (2 floors)
+        const floorW = 10, floorH = 3, floorD = 10;
+        for (let f = 0; f < 2; f++) {
+            const floor = new THREE.Group();
+            floor.position.y = f * floorH;
+            
+            const concreteCore = new THREE.Mesh(new THREE.BoxGeometry(floorW, floorH, floorD), concreteMat);
+            concreteCore.position.y = floorH / 2;
+            concreteCore.castShadow = true;
+            concreteCore.receiveShadow = true;
+            floor.add(concreteCore);
+
+            // Windows on 2 visible sides
+            for (let i = -3; i <= 3; i += 3) {
+                // Front windows
+                const winFront = new THREE.Mesh(new THREE.BoxGeometry(2, 1.8, 0.1), windowMat);
+                winFront.position.set(i, floorH / 2, floorD / 2 + 0.05);
+                floor.add(winFront);
+                
+                // Right windows
+                const winRight = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.8, 2), windowMat);
+                winRight.position.set(floorW / 2 + 0.05, floorH / 2, i);
+                floor.add(winRight);
+            }
+            siteGroup.add(floor);
+        }
+
+        // Exposed Upper Floor (3rd floor)
+        const frameGroup = new THREE.Group();
+        frameGroup.position.y = 2 * floorH;
+        siteGroup.add(frameGroup);
+
+        // Columns
+        for (let x of [-4.5, 0, 4.5]) {
+            for (let z of [-4.5, 0, 4.5]) {
+                const col = new THREE.Mesh(new THREE.BoxGeometry(0.6, floorH, 0.6), steelMat);
+                col.position.set(x, floorH / 2, z);
+                col.castShadow = true;
+                col.receiveShadow = true;
+                frameGroup.add(col);
+            }
+        }
+        // Beams
+        for (let x of [-4.5, 0, 4.5]) {
+            const beam = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 9.6), steelMat);
+            beam.position.set(x, floorH, 0);
+            beam.castShadow = true;
+            beam.receiveShadow = true;
+            frameGroup.add(beam);
+        }
+        for (let z of [-4.5, 0, 4.5]) {
+            const beam = new THREE.Mesh(new THREE.BoxGeometry(9.6, 0.4, 0.6), steelMat);
+            beam.position.set(0, floorH, z);
+            beam.castShadow = true;
+            beam.receiveShadow = true;
+            frameGroup.add(beam);
+        }
+
+        // Scaffolding on the front and right
+        const scaffoldGroup = new THREE.Group();
+        frameGroup.add(scaffoldGroup);
+        // Front scaffold
+        for (let x = -5; x <= 5; x += 2.5) {
+            const pipe = new THREE.Mesh(new THREE.BoxGeometry(0.1, floorH + 1, 0.1), scaffoldOrangeMat);
+            pipe.position.set(x, (floorH + 1) / 2, 5.2);
+            pipe.castShadow = true;
+            scaffoldGroup.add(pipe);
+        }
+        for (let y = 1; y <= floorH; y += 1) {
+            const pipe = new THREE.Mesh(new THREE.BoxGeometry(10, 0.1, 0.1), scaffoldOrangeMat);
+            pipe.position.set(0, y, 5.2);
+            pipe.castShadow = true;
+            scaffoldGroup.add(pipe);
+        }
+        // Right scaffold
+        for (let z = -5; z <= 5; z += 2.5) {
+            const pipe = new THREE.Mesh(new THREE.BoxGeometry(0.1, floorH + 1, 0.1), scaffoldOrangeMat);
+            pipe.position.set(5.2, (floorH + 1) / 2, z);
+            pipe.castShadow = true;
+            scaffoldGroup.add(pipe);
+        }
+        for (let y = 1; y <= floorH; y += 1) {
+            const pipe = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 10), scaffoldOrangeMat);
+            pipe.position.set(5.2, y, 0);
+            pipe.castShadow = true;
+            scaffoldGroup.add(pipe);
+        }
+
+        // 6. Crane
+        const craneGroup = new THREE.Group();
+        craneGroup.position.set(-2, 0, -2);
+        siteGroup.add(craneGroup);
+
+        // Tower
+        const towerGeo = new THREE.BoxGeometry(1.5, 16, 1.5);
+        const tower = new THREE.Mesh(towerGeo, constructionYellowMat);
+        tower.position.y = 8;
+        tower.castShadow = true;
+        tower.receiveShadow = true;
+        craneGroup.add(tower);
+
+        // Rotating part (Cabin + Jib)
+        const craneHead = new THREE.Group();
+        craneHead.position.y = 16;
+        craneGroup.add(craneHead);
+
+        // Cabin
+        const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.5, 2.5), whiteMat);
+        cabin.position.set(1.5, 0.75, 0);
+        cabin.castShadow = true;
+        craneHead.add(cabin);
+
+        // Jib (long arm)
+        const jib = new THREE.Mesh(new THREE.BoxGeometry(16, 1, 1), constructionYellowMat);
+        jib.position.set(8, 1.5, 0);
+        jib.castShadow = true;
+        craneHead.add(jib);
+
+        // Counter-jib
+        const counterJib = new THREE.Mesh(new THREE.BoxGeometry(5, 1, 1), constructionYellowMat);
+        counterJib.position.set(-3.25, 1.5, 0);
+        counterJib.castShadow = true;
+        craneHead.add(counterJib);
+
+        // Counter-weight
+        const weight = new THREE.Mesh(new THREE.BoxGeometry(2, 1.5, 1.2), darkConcreteMat);
+        weight.position.set(-4.5, 2.75, 0);
+        weight.castShadow = true;
+        craneHead.add(weight);
+
+        // Top spike (Apex)
+        const apex = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 1, 3, 4), constructionYellowMat);
+        apex.position.set(0, 3.5, 0);
+        apex.rotation.y = Math.PI / 4;
+        craneHead.add(apex);
+
+        // Cable lines from apex
+        const matLine = new THREE.LineBasicMaterial({ color: 0x333333 });
+        const lineGeo1 = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 5, 0), new THREE.Vector3(12, 2, 0)]);
+        craneHead.add(new THREE.Line(lineGeo1, matLine));
+        const lineGeo2 = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 5, 0), new THREE.Vector3(-4, 2, 0)]);
+        craneHead.add(new THREE.Line(lineGeo2, matLine));
+
+        // Hook line dropping down
+        const hookLineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(12, 1, 0), new THREE.Vector3(12, -10, 0)]);
+        const hookLine = new THREE.Line(hookLineGeo, matLine);
+        craneHead.add(hookLine);
+        
+        const hookBlock = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1, 0.8), darkConcreteMat);
+        hookBlock.position.set(12, -10.5, 0);
+        hookBlock.castShadow = true;
+        craneHead.add(hookBlock);
+        
+        const hookLoad = new THREE.Mesh(new THREE.BoxGeometry(3, 0.4, 1.5), steelMat);
+        hookLoad.position.set(12, -11.5, 0);
+        hookLoad.castShadow = true;
+        craneHead.add(hookLoad);
+
+        // Warning Light on apex
+        const warnLightMat = new THREE.MeshStandardMaterial({ color: 0xff3300, emissive: 0xff3300, emissiveIntensity: 1 });
+        const warnLight = new THREE.Mesh(new THREE.SphereGeometry(0.3), warnLightMat);
+        warnLight.position.set(0, 5.2, 0);
+        craneHead.add(warnLight);
+        
+        // 7. Ground level construction details
+        const detailsGroup = new THREE.Group();
+        siteGroup.add(detailsGroup);
+
+        // Construction Fence
+        const fenceMat = new THREE.MeshStandardMaterial({ color: 0xF57C00 });
+        const fenceFront = new THREE.Mesh(new THREE.BoxGeometry(14, 1.5, 0.2), fenceMat);
+        fenceFront.position.set(0, 0.75, 7);
+        fenceFront.castShadow = true;
+        detailsGroup.add(fenceFront);
+        
+        const fenceLeft = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.5, 14), fenceMat);
+        fenceLeft.position.set(-7, 0.75, 0);
+        fenceLeft.castShadow = true;
+        detailsGroup.add(fenceLeft);
+        
+        const fenceRight = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.5, 14), fenceMat);
+        fenceRight.position.set(7, 0.75, 0);
+        fenceRight.castShadow = true;
+        detailsGroup.add(fenceRight);
+        
+        const fenceBack = new THREE.Mesh(new THREE.BoxGeometry(14, 1.5, 0.2), fenceMat);
+        fenceBack.position.set(0, 0.75, -7);
+        fenceBack.castShadow = true;
+        detailsGroup.add(fenceBack);
+
+        // "ORION" Sign on the front fence
+        // Creating a canvas for the sign
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 128;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#00ACC1'; // Bold teal/blue
+        ctx.fillRect(0, 0, 512, 128);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 80px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('ORION', 256, 64);
+        
+        const signTex = new THREE.CanvasTexture(canvas);
+        const signMat = new THREE.MeshStandardMaterial({ map: signTex });
+        const sign = new THREE.Mesh(new THREE.PlaneGeometry(4, 1), signMat);
+        sign.position.set(0, 1, 7.11); // Slightly in front of fence
+        detailsGroup.add(sign);
+
+        // Equipment: Excavator (simplified)
+        const excavator = new THREE.Group();
+        excavator.position.set(4, 0, 4);
+        excavator.rotation.y = -Math.PI / 4;
+        detailsGroup.add(excavator);
+        
+        const tracks = new THREE.Mesh(new THREE.BoxGeometry(2, 0.8, 3), darkConcreteMat);
+        tracks.position.y = 0.4;
+        tracks.castShadow = true;
+        excavator.add(tracks);
+        
+        const excBody = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.2, 2.2), constructionYellowMat);
+        excBody.position.set(0, 1.4, -0.2);
+        excBody.castShadow = true;
+        excavator.add(excBody);
+        
+        const excCab = new THREE.Mesh(new THREE.BoxGeometry(1, 1.2, 1), windowMat);
+        excCab.position.set(0.5, 2.6, 0.4);
+        excCab.castShadow = true;
+        excavator.add(excCab);
+        
+        const excArm = new THREE.Mesh(new THREE.BoxGeometry(0.4, 3, 0.4), constructionYellowMat);
+        excArm.position.set(-0.5, 2.5, 1.5);
+        excArm.rotation.x = -Math.PI / 6;
+        excArm.castShadow = true;
+        excavator.add(excArm);
+
+        // Pallets and materials
+        for (let i = 0; i < 3; i++) {
+            const pallet = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.2, 1.2), woodMat);
+            pallet.position.set(-5, 0.1, 4 - i * 1.5);
+            pallet.castShadow = true;
+            detailsGroup.add(pallet);
+            
+            const bricks = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), darkConcreteMat);
+            bricks.position.set(-5, 0.7, 4 - i * 1.5);
+            bricks.castShadow = true;
+            detailsGroup.add(bricks);
+        }
+
+        // Tiny Workers
+        const workerMat = new THREE.MeshStandardMaterial({ color: 0x8BC34A }); // hi-vis green vest
+        const hatMat = new THREE.MeshStandardMaterial({ color: 0xFFEB3B }); // yellow hard hat
+        
+        function createWorker(x, z, rot) {
+            const worker = new THREE.Group();
+            
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.6), workerMat);
+            body.position.y = 0.3;
+            body.castShadow = true;
+            worker.add(body);
+            
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.12), new THREE.MeshStandardMaterial({color: 0xFFCC80})); // skin tone
+            head.position.y = 0.7;
+            head.castShadow = true;
+            worker.add(head);
+            
+            const hat = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.05), hatMat);
+            hat.position.y = 0.8;
+            hat.castShadow = true;
+            worker.add(hat);
+            
+            worker.position.set(x, 0, z);
+            worker.rotation.y = rot;
+            return worker;
+        }
+        
+        detailsGroup.add(createWorker(2, 5, Math.PI));
+        detailsGroup.add(createWorker(-4, 2, Math.PI/2));
+        detailsGroup.add(createWorker(4.5, -2, -Math.PI/4));
+
+        // 8. Animation Loop
+        const clock = new THREE.Clock();
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const time = clock.getElapsedTime();
+            
+            // Subtle crane rotation (very slow back and forth or continuous)
+            craneHead.rotation.y = Math.sin(time * 0.1) * 0.6 + Math.PI / 4;
+            
+            // Pulsing warning light
+            warnLightMat.emissiveIntensity = 0.4 + Math.sin(time * 4) * 0.6;
+            
+            renderer.render(scene, camera);
+        }
+        
+        // Window Resize Handling
+        window.addEventListener('resize', () => {
+            const aspect = window.innerWidth / window.innerHeight;
+            camera.left = -d * aspect;
+            camera.right = d * aspect;
+            camera.top = d;
+            camera.bottom = -d;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Start animation
+        animate();
+    </script>
+</body>
+</html>
