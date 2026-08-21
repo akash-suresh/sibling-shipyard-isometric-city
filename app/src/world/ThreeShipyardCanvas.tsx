@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { SceneManager } from "./three/SceneManager";
 import { TerrainBuilder } from "./three/TerrainBuilder";
 import { DecorBuilder } from "./three/DecorBuilder";
+import { buildShipyard } from "./three/buildings/ShipyardBuilder";
 import { shipyardZeroLayout } from "./layout/townLayout";
 import { BuildingFactory } from "./three/buildings/BuildingFactory";
 import type { ProjectDefinition } from "../data/types";
@@ -52,6 +53,12 @@ export function ThreeShipyardCanvas({
     const decorBuilder = new DecorBuilder(manager.scene);
     const decor = decorBuilder.placeDecor(shipyardZeroLayout);
     manager.worldGroup.add(decor);
+
+    const { group: shipyard, updatable: shipyardUpdatable } = buildShipyard();
+    manager.worldGroup.add(shipyard);
+    if (shipyardUpdatable) {
+      manager.registerUpdatable(shipyardUpdatable);
+    }
 
     manager.worldGroup.add(buildingsContainerRef.current);
 
