@@ -37,7 +37,7 @@
     "summary": "A growing platform becoming a Shipyard landmark.",
     "stage": "growing",
     "status": "growing",
-    "grid": { "x": 12, "y": 4 },
+    "grid": { "x": 14, "y": 4 },
     "building": {
       "archetype": "tower",
       "modules": ["tower-floor", "tower-floor", "sky-wing"],

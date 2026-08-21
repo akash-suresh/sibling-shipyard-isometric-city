@@ -52,9 +52,9 @@ export const shipyardZeroLayout: TownLayout = {
     // Central Monument Plaza
     ...Array.from({ length: 5 }, (_, x) => Array.from({ length: 5 }, (_, y) => point(14 + x, 14 + y))).flat(),
     // Nexus Plaza
-    point(12, 4), point(13, 4), point(14, 4),
-    point(12, 6), point(13, 6), point(14, 6),
-    point(13, 5), point(14, 5),
+    point(14, 4), point(15, 4), point(16, 4),
+    point(14, 6), point(15, 6), point(16, 6),
+    point(15, 5), point(16, 5),
   ],
   paths: [
     // Path to Orion
@@ -62,7 +62,8 @@ export const shipyardZeroLayout: TownLayout = {
     // Path to Spark
     point(20, 13), point(20, 14), point(20, 15),
     // Path connecting Nexus to road
-    point(12, 7), point(12, 8), point(12, 9), point(12, 10), point(12, 11)
+    point(14, 7), point(14, 8), point(14, 9), point(14, 10), point(14, 11),
+    point(13, 11) // connect to x=12 road
   ],
   water: Array.from({ length: 24 }, (_, y) => point(2, y)).filter(({ y }) => y !== 12),
   bridges: [{ grid: point(2, 12), axis: "x" }],

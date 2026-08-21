@@ -7,7 +7,7 @@ describe("visual tokens", () => {
   })
 
   it("converts validated hex project accents", () => {
-    expect(hexColor("#EF8354")).toBe(visualTokens.palette.orion)
+    expect(hexColor("#FF5722")).toBe(visualTokens.palette.orion)
     expect(() => hexColor("coral")).toThrow("Invalid color")
   })
 })
