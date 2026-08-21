@@ -1,7 +1,16 @@
 import * as THREE from 'three';
 import type { Updatable } from '../SceneManager';
 import { visualTokens } from '../../../design/visualTokens';
-import { createTowerCrane, createDumpTruck, createExcavator, createChainlinkFence, createFoundationPit } from './constructionProps';
+import { 
+  createExcavator, 
+  createTowerCrane, 
+  createDumpTruck, 
+  createWorker,
+  createChainlinkFence,
+  createFoundationPit,
+  createMaterialStacks
+} from "./constructionProps";
+import { createBuildingSign } from './BuildingSign';
 
 export interface BuildingResult {
   group: THREE.Group;
@@ -96,6 +105,38 @@ export function buildTower(config: {
   truck.position.set(2, 0, 2);
   tagReveal(truck, 0.05, 0.4);
   constructionGroup.add(truck);
+  
+  const stacks = createMaterialStacks();
+  stacks.position.set(-2.5, 0, 2.5); // Place them on the grass
+  tagReveal(stacks, 0.0, 0.8); // Show during most of construction
+  constructionGroup.add(stacks);
+  
+  // Temporary construction billboard showing the logo
+  const groundBillboard = createBuildingSign({
+    id: 'temp',
+    name: config.name,
+    status: config.status,
+    stage: config.stage,
+    logo: config.logo,
+    grid: { x: 0, y: 0 },
+    building: { archetype: 'tower', accent: config.accent }
+  });
+  groundBillboard.scale.set(0.1, 0.1, 0.1);
+  groundBillboard.position.set(4, 1.5, 4); // On the grass edge
+  groundBillboard.rotation.y = -Math.PI / 4;
+  tagReveal(groundBillboard, 0.0, 0.95); // Disappears right before the roof sign takes over
+  
+  // Add some wooden stilts for the billboard
+  const stiltMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, flatShading: true }); // dark wood
+  const stiltGeo = new THREE.CylinderGeometry(0.5, 0.5, 15);
+  const stilt1 = new THREE.Mesh(stiltGeo, stiltMat);
+  stilt1.position.set(-5, -7.5, -1);
+  const stilt2 = new THREE.Mesh(stiltGeo, stiltMat);
+  stilt2.position.set(5, -7.5, -1);
+  groundBillboard.add(stilt1);
+  groundBillboard.add(stilt2);
+
+  constructionGroup.add(groundBillboard);
   
   group.add(constructionGroup);
 

@@ -167,31 +167,93 @@ export function createTowerCrane(towerHeight: number = 4.0): { group: THREE.Grou
 
 export function createChainlinkFence(width: number, depth: number) {
   const fenceGroup = new THREE.Group();
-  const fThickness = 0.04;
-  const fHeight = 0.3;
-  const fenceMat = scaffoldOrangeMat; // chainlink or orange scaffold
+  const fHeight = 0.8; // Taller fence
   
-  const fenceFront = new THREE.Mesh(new THREE.BoxGeometry(width, fHeight, fThickness), fenceMat);
-  fenceFront.position.set(0, fHeight / 2, depth / 2);
-  fenceFront.castShadow = true;
-  fenceGroup.add(fenceFront);
+  // Create a grid-like texture or material for the chain-link
+  const chainlinkMat = new THREE.MeshStandardMaterial({ 
+    color: 0x999999, 
+    transparent: true, 
+    opacity: 0.6,
+    wireframe: true, // Quick hack to look like a grid fence!
+    side: THREE.DoubleSide
+  });
+
+  const poleMat = steelMat;
+  const poleGeo = new THREE.CylinderGeometry(0.02, 0.02, fHeight);
+
+  // Add poles at corners
+  const corners = [
+    [-width/2, -depth/2], [width/2, -depth/2],
+    [width/2, depth/2], [-width/2, depth/2]
+  ];
   
-  const fenceBack = new THREE.Mesh(new THREE.BoxGeometry(width, fHeight, fThickness), fenceMat);
-  fenceBack.position.set(0, fHeight / 2, -depth / 2);
-  fenceBack.castShadow = true;
-  fenceGroup.add(fenceBack);
+  corners.forEach(([x, z]) => {
+    const pole = new THREE.Mesh(poleGeo, poleMat);
+    pole.position.set(x, fHeight / 2, z);
+    pole.castShadow = true;
+    fenceGroup.add(pole);
+  });
+
+  // Front/Back panels
+  const fbPanel = new THREE.PlaneGeometry(width, fHeight, Math.floor(width * 4), Math.floor(fHeight * 4));
+  const frontMesh = new THREE.Mesh(fbPanel, chainlinkMat);
+  frontMesh.position.set(0, fHeight / 2, depth / 2);
+  fenceGroup.add(frontMesh);
   
-  const fenceLeft = new THREE.Mesh(new THREE.BoxGeometry(fThickness, fHeight, depth), fenceMat);
-  fenceLeft.position.set(-width / 2, fHeight / 2, 0);
-  fenceLeft.castShadow = true;
-  fenceGroup.add(fenceLeft);
+  const backMesh = new THREE.Mesh(fbPanel, chainlinkMat);
+  backMesh.position.set(0, fHeight / 2, -depth / 2);
+  fenceGroup.add(backMesh);
+
+  // Left/Right panels
+  const lrPanel = new THREE.PlaneGeometry(depth, fHeight, Math.floor(depth * 4), Math.floor(fHeight * 4));
+  const leftMesh = new THREE.Mesh(lrPanel, chainlinkMat);
+  leftMesh.position.set(-width / 2, fHeight / 2, 0);
+  leftMesh.rotation.y = Math.PI / 2;
+  fenceGroup.add(leftMesh);
   
-  const fenceRight = new THREE.Mesh(new THREE.BoxGeometry(fThickness, fHeight, depth), fenceMat);
-  fenceRight.position.set(width / 2, fHeight / 2, 0);
-  fenceRight.castShadow = true;
-  fenceGroup.add(fenceRight);
+  const rightMesh = new THREE.Mesh(lrPanel, chainlinkMat);
+  rightMesh.position.set(width / 2, fHeight / 2, 0);
+  rightMesh.rotation.y = Math.PI / 2;
+  fenceGroup.add(rightMesh);
   
   return fenceGroup;
+}
+
+export function createMaterialStacks() {
+  const stacks = new THREE.Group();
+
+  // Glass panel stack (cyan tinted, transparent)
+  const glassMat = new THREE.MeshStandardMaterial({ color: 0x88ccff, transparent: true, opacity: 0.7, flatShading: true });
+  const glassStack = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 0.8), glassMat);
+  glassStack.position.set(0, 0.2, 0);
+  glassStack.castShadow = true;
+  
+  // Wooden pallet under glass
+  const woodMat = new THREE.MeshStandardMaterial({ color: p.soil, flatShading: true });
+  const pallet = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.05, 0.85), woodMat);
+  pallet.position.set(0, 0.025, 0);
+  
+  const glassGroup = new THREE.Group();
+  glassGroup.add(glassStack);
+  glassGroup.add(pallet);
+  glassGroup.position.set(2, 0, 1.5);
+  stacks.add(glassGroup);
+
+  // Steel beams stack (dark grey, long)
+  const steelStack = new THREE.Group();
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.08, 0.08), steelMat);
+      beam.position.set(0, 0.04 + i * 0.08, (j - 1) * 0.1);
+      beam.castShadow = true;
+      steelStack.add(beam);
+    }
+  }
+  steelStack.position.set(1.5, 0, -1.8);
+  steelStack.rotation.y = Math.PI / 6;
+  stacks.add(steelStack);
+
+  return stacks;
 }
 
 export function createFoundationPit(width: number, depth: number) {
