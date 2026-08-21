@@ -20,6 +20,7 @@ export function App() {
     playCount: 0,
   });
   const [isNightMode, setIsNightMode] = useState(false);
+  const [globalProgress, setGlobalProgress] = useState(1.0);
   
   // Secret developer mode via ?playground in the URL
   const isPlayground = new URLSearchParams(window.location.search).has('playground');
@@ -55,9 +56,25 @@ export function App() {
         Drag to explore · Scroll to zoom · Select a project
       </div>
 
-      <ThreeShipyardCanvas projects={projectsState} isNightMode={isNightMode} />
+      <ThreeShipyardCanvas projects={projectsState} isNightMode={isNightMode} globalProgress={globalProgress} />
       {isPlayground && (
-        <PlaygroundControls projects={projectsState} setProjects={setProjectsState} />
+        <>
+          <PlaygroundControls projects={projectsState} setProjects={setProjectsState} />
+          <div style={{ position: 'fixed', bottom: 64, right: 16, zIndex: 100, background: 'rgba(255,255,255,0.9)', padding: 16, borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: 8, color: '#333' }}>
+              Global Construction Time
+            </label>
+            <input 
+              type="range" 
+              min="0" 
+              max="1" 
+              step="0.01" 
+              value={globalProgress}
+              onChange={(e) => setGlobalProgress(parseFloat(e.target.value))}
+              style={{ width: '200px' }}
+            />
+          </div>
+        </>
       )}
 
       <nav className="project-nav" aria-label="Explore projects">

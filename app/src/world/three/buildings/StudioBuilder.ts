@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { Updatable } from '../SceneManager';
 import { visualTokens } from '../../../design/visualTokens';
-import { createTowerCrane, createChainlinkFence, createFoundationPit, createDumpTruck, createExcavator } from './constructionProps';
+import { createTowerCrane, createExcavator, createChainlinkFence, createFoundationPit, createDumpTruck } from './constructionProps';
 
 export interface BuildingResult {
   group: THREE.Group;
@@ -16,334 +16,222 @@ export function buildStudio(config: {
   logo?: string;
 }): BuildingResult {
   const group = new THREE.Group();
+  const p = visualTokens.palette;
+
+  // Timeline configuration
+  const stageMap: Record<string, number> = {
+    idea: 0.15,      // Foundation & Pit
+    prototype: 0.45, // Skeleton up
+    shipped: 0.75,   // Facade installed
+    landmark: 1.0    // Detailed
+  };
+  
+  let targetProgress = stageMap[config.stage] || 0.2;
+  let currentProgress = targetProgress;
 
   // Materials
-  const p = visualTokens.palette;
-  const concreteMat = new THREE.MeshStandardMaterial({ color: p.concrete, flatShading: true });
-  const wallMat = new THREE.MeshStandardMaterial({ color: p.structure, flatShading: true });
-  const glassMat = new THREE.MeshStandardMaterial({ color: p.glass, emissive: 0x445533, flatShading: true });
-  glassMat.userData.isWindow = true;
-  const accentColor = new THREE.Color(config.accent || p.spark);
-  const accentMat = new THREE.MeshStandardMaterial({ color: accentColor, flatShading: true });
-  const doorwayMat = new THREE.MeshStandardMaterial({ color: 0x222222, flatShading: true });
-  const hvacMat = new THREE.MeshStandardMaterial({ color: p.metal, flatShading: true });
-  const bushMat = new THREE.MeshStandardMaterial({ color: p.hedge, flatShading: true });
-  const pathMat = new THREE.MeshStandardMaterial({ color: p.sidewalk, flatShading: true });
-  const woodMat = new THREE.MeshStandardMaterial({ color: p.soil, flatShading: true });
-  const cartMat = new THREE.MeshStandardMaterial({ color: 0xFF5722, flatShading: true });
-  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x222222, flatShading: true });
-  const beaconMat = new THREE.MeshStandardMaterial({ color: p.activeLight, emissive: p.activeLight, emissiveIntensity: 1, flatShading: true });
+  const glassMat = new THREE.MeshStandardMaterial({ color: 0x55aaff, transparent: true, opacity: 0.6, metalness: 0.9, roughness: 0.1, flatShading: true });
+  const solidMat = new THREE.MeshStandardMaterial({ color: 0xf5f5f5, flatShading: true }); // White tech walls
+  const accentMat = new THREE.MeshStandardMaterial({ color: config.accent, flatShading: true });
+  const roofMat = new THREE.MeshStandardMaterial({ color: 0x666666, flatShading: true });
+  const steelMat = new THREE.MeshStandardMaterial({ color: 0x444444, flatShading: true });
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, flatShading: true });
+  const hvacMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, flatShading: true });
 
-  // 1. Building base
-  const baseW = 9, baseH = 0.4, baseD = 7;
-  const stageIndex = Math.max(0, ["idea", "prototype", "shipped", "landmark"].indexOf(config.stage));
-
-  if (stageIndex === 0 && config.status === "building") {
-    const pit = createFoundationPit(baseW + 0.5, baseD + 0.5);
-    group.add(pit);
-  } else {
-    const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(baseW, baseH, baseD), concreteMat);
-    baseMesh.position.set(0, baseH / 2, 0);
-    baseMesh.castShadow = true;
-    baseMesh.receiveShadow = true;
-    group.add(baseMesh);
-  }
-
-  // 2. Main building body
-  const numFloors = [1, 2, 2, 3][stageIndex] || 1; // 1 to 3 floors
-  const floorH = 2.5;
-  const buildW = 10;
-  const buildD = 8;
-  const totalH = numFloors * floorH;
-
-  const buildingBody = new THREE.Group();
-  buildingBody.position.set(0, baseH, 0);
-  group.add(buildingBody);
-
-  for (let f = 0; f < numFloors; f++) {
-    const yOffset = f * floorH;
-    
-    // Core floor block
-    const core = new THREE.Mesh(new THREE.BoxGeometry(buildW, floorH, buildD), wallMat);
-    core.position.set(0, yOffset + floorH / 2, 0);
-    core.castShadow = true;
-    core.receiveShadow = true;
-    buildingBody.add(core);
-
-    // Windows (front and sides)
-    // Front windows (z = buildD/2)
-    for (let x = -3.5; x <= 3.5; x += 1.5) {
-      if (f === 0 && x >= -1 && x <= 1) continue; // Skip window at entrance
-      const win = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.8, 0.1), glassMat);
-      win.position.set(x, yOffset + floorH / 2, buildD / 2 + 0.01);
-      buildingBody.add(win);
-    }
-    
-    // Left & Right windows
-    for (let z = -2.5; z <= 2.5; z += 1.5) {
-      // Right
-      const winR = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.8, 1.2), glassMat);
-      winR.position.set(buildW / 2 + 0.01, yOffset + floorH / 2, z);
-      buildingBody.add(winR);
-      
-      // Left
-      const winL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.8, 1.2), glassMat);
-      winL.position.set(-buildW / 2 - 0.01, yOffset + floorH / 2, z);
-      buildingBody.add(winL);
-    }
-
-    // Floor plate line
-    if (f < numFloors - 1) {
-      const plateLine = new THREE.Mesh(new THREE.BoxGeometry(buildW + 0.2, 0.1, buildD + 0.2), concreteMat);
-      plateLine.position.set(0, yOffset + floorH, 0);
-      plateLine.castShadow = true;
-      buildingBody.add(plateLine);
-    }
-  }
-
-  // 3. Entrance
-  const entranceGroup = new THREE.Group();
-  entranceGroup.position.set(0, 0, buildD / 2);
-  buildingBody.add(entranceGroup);
-
-  // Protruding section
-  const entranceW = 4, entranceD = 1;
-  const entBody = new THREE.Mesh(new THREE.BoxGeometry(entranceW, floorH, entranceD), wallMat);
-  entBody.position.set(0, floorH / 2, entranceD / 2);
-  entBody.castShadow = true;
-  entBody.receiveShadow = true;
-  entranceGroup.add(entBody);
-
-  // Awning
-  const awning = new THREE.Mesh(new THREE.BoxGeometry(entranceW + 0.4, 0.2, entranceD + 1), accentMat);
-  awning.position.set(0, floorH, entranceD / 2 + 0.5);
-  awning.castShadow = true;
-  entranceGroup.add(awning);
-
-  // Doorway (recessed)
-  const doorway = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 0.2), doorwayMat);
-  doorway.position.set(0, 1, entranceD + 0.01);
-  entranceGroup.add(doorway);
-
-  // Welcome mat/plaza
-  const matMesh = new THREE.Mesh(new THREE.BoxGeometry(3, 0.05, 2), accentMat);
-  matMesh.position.set(0, baseH + 0.025, buildD / 2 + 1);
-  group.add(matMesh);
-
-  // 4. Rooftop features
-  const roofY = totalH;
-  const roofGroup = new THREE.Group();
-  roofGroup.position.set(0, roofY, 0);
-  buildingBody.add(roofGroup);
-
-  // Parapet
-  const parapetWMesh = new THREE.Mesh(new THREE.BoxGeometry(buildW, 0.4, 0.2), wallMat);
-  parapetWMesh.position.set(0, 0.2, buildD / 2 - 0.1);
-  roofGroup.add(parapetWMesh);
+  const constructionGroup = new THREE.Group();
+  const finishedGroup = new THREE.Group();
   
-  const parapetW2 = new THREE.Mesh(new THREE.BoxGeometry(buildW, 0.4, 0.2), wallMat);
-  parapetW2.position.set(0, 0.2, -buildD / 2 + 0.1);
-  roofGroup.add(parapetW2);
+  // Dimensions
+  const width = 8;
+  const depth = 8;
+  const floorHeight = 3;
 
-  const parapetD = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.4, buildD), wallMat);
-  parapetD.position.set(buildW / 2 - 0.1, 0.2, 0);
-  roofGroup.add(parapetD);
-  
-  const parapetD2 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.4, buildD), wallMat);
-  parapetD2.position.set(-buildW / 2 + 0.1, 0.2, 0);
-  roofGroup.add(parapetD2);
+  // 1. Pit and Foundation (Idea)
+  const pit = createFoundationPit(width + 0.5, depth + 0.5);
+  const foundation = new THREE.Mesh(new THREE.BoxGeometry(width, 0.2, depth), solidMat);
+  foundation.position.y = 0.1;
 
-  // HVAC
-  const hvac = new THREE.Mesh(new THREE.BoxGeometry(2, 1, 2), hvacMat);
-  hvac.position.set(-2, 0.5, -1);
-  hvac.castShadow = true;
-  roofGroup.add(hvac);
-
-  const hvac2 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.8, 1.5), hvacMat);
-  hvac2.position.set(2, 0.4, -2);
-  hvac2.castShadow = true;
-  roofGroup.add(hvac2);
-
-  // Beacon
-  const updatables: Updatable[] = [];
-  let timeElapsed = 0;
-
-  if (stageIndex >= 3) { // Landmark
-    const beaconBase = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.5, 0.6), hvacMat);
-    beaconBase.position.set(0, 0.3, 1);
-    beaconBase.castShadow = true;
-    roofGroup.add(beaconBase);
-
-    const beaconLight = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16, 16), beaconMat);
-    beaconLight.position.set(0, 0.9, 1);
-    roofGroup.add(beaconLight);
-
-    updatables.push({
-      update(deltaTime: number) {
-        timeElapsed += deltaTime;
-        beaconMat.emissiveIntensity = 0.5 + 0.5 * Math.sin(Math.PI * timeElapsed);
+  // 2. Steel Skeleton (Prototype)
+  const skeletonGroup = new THREE.Group();
+  for (let y = 0; y < 2; y++) {
+    for (let x = -width/2 + 0.2; x <= width/2; x += 2) {
+      for (let z = -depth/2 + 0.2; z <= depth/2; z += 2) {
+        if (y === 1 && (x > 0 && z > 0)) continue; // L-shape cutout for patio on floor 2
+        
+        const col = new THREE.Mesh(new THREE.BoxGeometry(0.1, floorHeight, 0.1), steelMat);
+        col.position.set(x, 0.2 + y * floorHeight + floorHeight/2, z);
+        skeletonGroup.add(col);
       }
-    });
+    }
   }
 
-  // Signage handled by BuildingFactory, but if there's a logo, paint it on the roof!
+  // 3. Facade & Walls (Shipped)
+  const facadeGroup = new THREE.Group();
+  
+  // Floor 1 (Full box)
+  const f1Glass = new THREE.Mesh(new THREE.BoxGeometry(width - 0.2, floorHeight, depth - 0.2), glassMat);
+  
+  // Mullions for F1
+  for(let x=-width/2 + 1; x<=width/2 - 1; x+=2) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.1, floorHeight, depth), steelMat);
+    m.position.set(x, 0.2 + floorHeight/2, 0);
+    facadeGroup.add(m);
+  }
+  for(let z=-depth/2 + 1; z<=depth/2 - 1; z+=2) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(width, floorHeight, 0.1), steelMat);
+    m.position.set(0, 0.2 + floorHeight/2, z);
+    facadeGroup.add(m);
+  }
+  f1Glass.position.y = 0.2 + floorHeight/2;
+  const f1Frame = new THREE.Mesh(new THREE.BoxGeometry(width, 0.3, depth), accentMat);
+  f1Frame.position.y = 0.2 + floorHeight;
+  facadeGroup.add(f1Glass, f1Frame);
+
+  // Interior floor so it's not empty
+  const interiorFloor = new THREE.Mesh(new THREE.BoxGeometry(width - 0.5, 0.1, depth - 0.5), solidMat);
+  interiorFloor.position.y = 0.2 + floorHeight;
+  facadeGroup.add(interiorFloor);
+
+
+  // Floor 2 (L-Shape)
+  const f2Glass1 = new THREE.Mesh(new THREE.BoxGeometry(width/2, floorHeight, depth), glassMat);
+  f2Glass1.position.set(-width/4, 0.2 + floorHeight + floorHeight/2, 0);
+  const f2Glass2 = new THREE.Mesh(new THREE.BoxGeometry(width/2, floorHeight, depth/2), glassMat);
+  f2Glass2.position.set(width/4, 0.2 + floorHeight + floorHeight/2, -depth/4);
+  facadeGroup.add(f2Glass1, f2Glass2);
+  
+  // Mullions for F2 Glass 1
+  for(let x=-width/2 + 1; x<=0 - 1; x+=2) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.1, floorHeight, depth), steelMat);
+    m.position.set(x, 0.2 + floorHeight*1.5, 0);
+    facadeGroup.add(m);
+  }
+  for(let z=-depth/2 + 1; z<=depth/2 - 1; z+=2) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(width/2, floorHeight, 0.1), steelMat);
+    m.position.set(-width/4, 0.2 + floorHeight*1.5, z);
+    facadeGroup.add(m);
+  }
+
+
+  // Roof & Patio
+  const roof2_1 = new THREE.Mesh(new THREE.BoxGeometry(width/2, 0.2, depth), roofMat);
+  roof2_1.position.set(-width/4, 0.2 + floorHeight * 2, 0);
+  const roof2_2 = new THREE.Mesh(new THREE.BoxGeometry(width/2, 0.2, depth/2), roofMat);
+  roof2_2.position.set(width/4, 0.2 + floorHeight * 2, -depth/4);
+  facadeGroup.add(roof2_1, roof2_2);
+  
+  // Patio Deck (Wood)
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(width/2, 0.1, depth/2), woodMat);
+  deck.position.set(width/4, 0.2 + floorHeight, depth/4);
+  facadeGroup.add(deck);
+
+  // 4. Details (Landmark)
+  const detailsGroup = new THREE.Group();
+  
+  // AC Units on Roof
+  const hvac = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.8, 1.5), hvacMat);
+  hvac.position.set(-2, 0.2 + floorHeight * 2 + 0.4, -2);
+  const hvac2 = new THREE.Mesh(new THREE.BoxGeometry(1, 0.8, 1.5), hvacMat);
+  hvac2.position.set(-2, 0.2 + floorHeight * 2 + 0.4, 1);
+  detailsGroup.add(hvac, hvac2);
+
+  // Patio Furniture
+  const bench = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 0.5), accentMat);
+  bench.position.set(width/4, 0.2 + floorHeight + 0.25, depth/4);
+  detailsGroup.add(bench);
+  
+  // Logo on patio deck or roof
   if (config.logo) {
     const textureLoader = new THREE.TextureLoader();
     textureLoader.load(config.logo, (texture) => {
       const aspect = texture.image.width / texture.image.height;
-      const logoW = 8;
+      const logoW = 3;
       const logoD = logoW / aspect;
       
       const paintedLogo = new THREE.Mesh(
         new THREE.PlaneGeometry(logoW, logoD),
-        new THREE.MeshStandardMaterial({ 
-          map: texture, 
-          transparent: true,
-          roughness: 0.8,
-          metalness: 0.1
-        })
+        new THREE.MeshStandardMaterial({ map: texture, transparent: true })
       );
-      
       paintedLogo.rotation.x = -Math.PI / 2;
-      paintedLogo.rotation.z = Math.PI / 2; // Read from front (+X)
-      // Raise it slightly above the concrete core to avoid Z-fighting
-      paintedLogo.position.set(0, 0.05, 0); 
-      roofGroup.add(paintedLogo);
+      paintedLogo.position.set(-width/4, 0.2 + floorHeight * 2 + 0.11, 0); 
+      detailsGroup.add(paintedLogo);
     });
   }
 
-  // 6. Landscaping
+  finishedGroup.add(pit, foundation, skeletonGroup, facadeGroup, detailsGroup);
+  group.add(finishedGroup);
+
+  // 5. Construction Equipment
+  const crane = createTowerCrane(10.0);
+  crane.group.position.set(width/2 + 1, 0, -depth/2 - 1);
+  const truck = createDumpTruck();
+  truck.position.set(-width/2 - 1, 0.1, depth/2 + 1);
+  const fence = createChainlinkFence(width + 1, depth + 1);
+  fence.position.y = 0.1;
   
-  // Walkway
-  const path = new THREE.Mesh(new THREE.BoxGeometry(2, 0.05, 4), pathMat);
-  path.position.set(0, 0.025, baseD / 2 + 2);
-  path.receiveShadow = true;
-  group.add(path);
+  constructionGroup.add(crane.group, truck, fence);
+  group.add(constructionGroup);
 
-  // Bushes on base
-  const bushPositions = [
-    [-3, 4.5], [3, 4.5], [-4, 3], [4, 3]
-  ];
-  bushPositions.forEach(pos => {
-    const bush = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 8), bushMat);
-    bush.position.set(pos[0], baseH + 0.4, pos[1]);
-    bush.castShadow = true;
-    group.add(bush);
-  });
+  // --- Animation & Visibility Logic ---
+  const tagTempProp = (obj: THREE.Object3D, revealStart: number, revealEnd: number) => {
+    obj.userData = { revealStart, revealEnd, baseScale: obj.scale.clone() };
+  };
 
-  // Bench
-  const bench = new THREE.Group();
-  const seat = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.1, 0.5), woodMat);
-  seat.position.y = 0.3;
-  seat.castShadow = true;
-  bench.add(seat);
-  const back = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.5, 0.1), woodMat);
-  back.position.set(0, 0.55, -0.2);
-  back.castShadow = true;
-  bench.add(back);
-  bench.position.set(3, baseH, 4);
-  bench.rotation.y = -Math.PI / 8;
-  group.add(bench);
+  tagTempProp(pit, 0.0, 0.2);
+  tagTempProp(foundation, 0.1, 1.0);
+  tagTempProp(skeletonGroup, 0.2, 0.75); // skeleton shrinks away after shipped
+  tagTempProp(facadeGroup, 0.5, 0.75); // facade finishes growing at shipped
+  tagTempProp(detailsGroup, 0.75, 0.9);
+  tagTempProp(constructionGroup, 0.0, 0.95);
 
-  // Planter
-  const planterMat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.8 });
-  const p1 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.4, 1.5), planterMat);
-  p1.position.set(-3, baseH + 0.2, 4);
-  p1.castShadow = true;
-  group.add(p1);
-  const p1Bush = new THREE.Mesh(new THREE.BoxGeometry(1, 0.6, 1), bushMat);
-  p1Bush.position.set(-3, baseH + 0.5, 4);
-  p1Bush.castShadow = true;
-  group.add(p1Bush);
-
-  // 6.5 Construction VFX
-  if (config.status === "building") {
-    // Fence around the studio
-    const fence = createChainlinkFence(baseW + 1.0, baseD + 2.0);
-    fence.position.y = 0.1;
-    group.add(fence);
-    
-    // Massive tower crane
-    const craneHeight = Math.max(4.0, totalH + 2.0);
-    const crane = createTowerCrane(craneHeight);
-    crane.group.position.set(baseW/2 + 0.5, 0.1, -baseD/2 + 0.5);
-    group.add(crane.group);
-    updatables.push(crane.updatable);
-    
-    // Dump truck and excavator
-    if (stageIndex >= 1) {
-      const truck = createDumpTruck();
-      truck.position.set(-baseW/2 - 0.5, 0.1, baseD/2 - 1.0);
-      truck.rotation.y = -Math.PI / 4;
-      group.add(truck);
-      
-      const excavator = createExcavator();
-      excavator.position.set(-baseW/2 + 1.0, 0.1, -baseD/2 - 0.5);
-      group.add(excavator);
-    }
-  }
-
-  // 7. Visitors
-  function createPerson(x: number, z: number, rot: number, color: number, yOffset: number) {
-    const personGroup = new THREE.Group();
-    const bodyMat = new THREE.MeshStandardMaterial({ color });
-    const headMat = new THREE.MeshStandardMaterial({ color: 0xFFCC80 });
-    
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.7), bodyMat);
-    body.position.y = 0.35;
-    body.castShadow = true;
-    personGroup.add(body);
-    
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.15), headMat);
-    head.position.y = 0.8;
-    head.castShadow = true;
-    personGroup.add(head);
-    
-    personGroup.position.set(x, yOffset, z);
-    personGroup.rotation.y = rot;
-    return personGroup;
-  }
-  
-  if (stageIndex >= 1 && config.status === "live") { // Prototype or later
-    group.add(createPerson(1.5, 4.5, -Math.PI / 4, 0x2196F3, baseH));
-    group.add(createPerson(1, 6, -Math.PI / 2, 0xE91E63, 0));
-  }
-
-  // 8. Coffee cart
-  if (stageIndex >= 2 && config.status === "live") { // Shipped or later
-    const cartGroup = new THREE.Group();
-    cartGroup.position.set(-4, 0, 7);
-    group.add(cartGroup);
-
-    const cartBody = new THREE.Mesh(new THREE.BoxGeometry(2, 1.5, 1.5), cartMat);
-    cartBody.position.y = 0.95;
-    cartBody.castShadow = true;
-    cartGroup.add(cartBody);
-    
-    const cartRoof = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.1, 2.2), new THREE.MeshStandardMaterial({ color: 0xFFFFFF }));
-    cartRoof.position.y = 1.75;
-    cartRoof.castShadow = true;
-    cartGroup.add(cartRoof);
-
-    for (let wx of [-0.6, 0.6]) {
-      for (let wz of [-0.8, 0.8]) {
-        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.1), wheelMat);
-        wheel.rotation.x = Math.PI / 2;
-        wheel.position.set(wx, 0.25, wz);
-        wheel.castShadow = true;
-        cartGroup.add(wheel);
+  const updatable: Updatable & { setStage?: (stage: string) => void, setProgress?: (p: number) => void } = {
+    setStage: (stage: string) => {
+      targetProgress = stageMap[stage] || 0.2;
+    },
+    setProgress: (progress: number) => {
+      targetProgress = progress;
+      currentProgress = progress; // instant
+    },
+    update: (delta, time) => {
+      const speed = 0.5;
+      if (currentProgress < targetProgress) {
+        currentProgress = Math.min(targetProgress, currentProgress + delta * speed);
+      } else if (currentProgress > targetProgress) {
+        currentProgress = Math.max(targetProgress, currentProgress - delta * speed);
       }
-    }
-  }
 
-  const finalUpdatable: Updatable = {
-    update(deltaTime: number) {
-      updatables.forEach(u => u.update(deltaTime));
+      const p = currentProgress;
+      
+      const checkAndScale = (obj: THREE.Object3D) => {
+        if (obj.userData.revealStart !== undefined) {
+          const { revealStart, revealEnd, baseScale } = obj.userData;
+          if (p >= revealStart && p <= revealEnd) {
+            const t = (p - revealStart) / (revealEnd - revealStart);
+            obj.scale.copy(baseScale).multiplyScalar(THREE.MathUtils.clamp(t * 1.5, 0, 1));
+          } else if (p > revealEnd) {
+             if (revealEnd < 0.99) {
+                const t = (p - revealEnd) / 0.1;
+                obj.scale.copy(baseScale).multiplyScalar(THREE.MathUtils.clamp(1 - t * 1.5, 0, 1));
+             } else {
+                obj.scale.copy(baseScale);
+             }
+          } else {
+            obj.scale.setScalar(0.001);
+          }
+        }
+      };
+
+      finishedGroup.children.forEach(checkAndScale);
+      checkAndScale(constructionGroup);
+      
+      if (crane.updatable) crane.updatable.update(delta, time);
     }
   };
 
+  updatable.update(0.1, 0); // initial tick
+
   return {
     group,
-    updatable: updatables.length > 0 ? finalUpdatable : undefined
+    updatable
   };
 }

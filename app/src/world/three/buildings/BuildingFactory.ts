@@ -59,7 +59,7 @@ export class BuildingFactory {
         result.group.scale.set(0.6, 0.6, 0.6); 
       } else if (project.building.archetype === 'studio') {
         result = buildStudio(config);
-        result.group.scale.set(0.75, 0.75, 0.75);
+        result.group.scale.set(1.2, 1.2, 1.2);
       } else if (project.building.archetype === 'tower') {
         result = buildTower(config);
         result.group.scale.set(1.4, 1.4, 1.4); // Made tower 40% bigger!

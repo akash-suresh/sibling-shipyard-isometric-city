@@ -9,7 +9,15 @@ import type { ProjectDefinition } from "../data/types";
 import { AmbientLife } from "./three/actors/AmbientLife";
 import { SelectionManager } from "./three/interaction/SelectionManager";
 
-export function ThreeShipyardCanvas({ projects, isNightMode = false }: { projects: ProjectDefinition[], isNightMode?: boolean }) {
+export function ThreeShipyardCanvas({ 
+  projects, 
+  isNightMode = false,
+  globalProgress
+}: { 
+  projects: ProjectDefinition[], 
+  isNightMode?: boolean,
+  globalProgress?: number
+}) {
   const hostRef = useRef<HTMLDivElement>(null);
   const sceneManagerRef = useRef<SceneManager | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -19,6 +27,12 @@ export function ThreeShipyardCanvas({ projects, isNightMode = false }: { project
       sceneManagerRef.current.setNightMode(isNightMode);
     }
   }, [isNightMode]);
+
+  useEffect(() => {
+    if (sceneManagerRef.current && globalProgress !== undefined) {
+      sceneManagerRef.current.setGlobalProgress(globalProgress);
+    }
+  }, [globalProgress]);
 
   const buildingsContainerRef = useRef<THREE.Group>(new THREE.Group());
   const buildingUpdatablesRef = useRef<import('./three/SceneManager').Updatable[]>([]);
