@@ -19,8 +19,9 @@ export function ThreeShipyardCanvas({ projects }: { projects: ProjectDefinition[
     sceneManagerRef.current = manager;
 
     const terrainBuilder = new TerrainBuilder(manager.scene);
-    const terrain = terrainBuilder.buildFromLayout(shipyardZeroLayout);
+    const { group: terrain, updatables: terrainUpdatables } = terrainBuilder.buildFromLayout(shipyardZeroLayout);
     manager.worldGroup.add(terrain);
+    terrainUpdatables.forEach(u => manager.registerUpdatable(u));
 
     const decorBuilder = new DecorBuilder(manager.scene);
     const decor = decorBuilder.placeDecor(shipyardZeroLayout);
@@ -45,6 +46,7 @@ export function ThreeShipyardCanvas({ projects }: { projects: ProjectDefinition[
       manager.unregisterUpdatable(selectionManager);
       manager.unregisterUpdatable(ambientLife);
       updatables.forEach(u => manager.unregisterUpdatable(u));
+      terrainUpdatables.forEach(u => manager.unregisterUpdatable(u));
       manager.dispose();
       sceneManagerRef.current = null;
     };

@@ -29,53 +29,92 @@ export function applyStatusEffects(group: THREE.Group, status: string): Updatabl
         }
       });
 
-      // 2. Fire flickering meshes & lights
+      // 2. Dramatic Fire flickering meshes & lights
       const fireGroup = new THREE.Group();
-      fireGroup.position.set(0, 0, 0);
       group.add(fireGroup);
       
-      const fireGeo = new THREE.ConeGeometry(0.5, 1.5, 4);
+      const fireGeo = new THREE.ConeGeometry(0.8, 2.5, 5);
       const fireMat = new THREE.MeshLambertMaterial({ flatShading: true,
-        color: 0xff8800,
+        color: 0xffaa00,
         emissive: 0xff4400,
-        emissiveIntensity: 2,
+        emissiveIntensity: 3,
         transparent: true
       });
       
-      const fires: THREE.Mesh[] = [];
-      for(let i=0; i<3; i++) {
+      const fires: { mesh: THREE.Mesh, phase: number, speed: number }[] = [];
+      for(let i = 0; i < 8; i++) {
         const fireMesh = new THREE.Mesh(fireGeo, fireMat);
-        fireMesh.position.set((Math.random()-0.5)*2, 0.75, (Math.random()-0.5)*2);
+        const radius = Math.random() * 2;
+        const angle = Math.random() * Math.PI * 2;
+        fireMesh.position.set(Math.cos(angle) * radius, 1, Math.sin(angle) * radius);
+        
+        // Random tilt
+        fireMesh.rotation.x = (Math.random() - 0.5) * 0.5;
+        fireMesh.rotation.z = (Math.random() - 0.5) * 0.5;
+        
         fireGroup.add(fireMesh);
-        fires.push(fireMesh);
+        fires.push({ mesh: fireMesh, phase: Math.random() * Math.PI * 2, speed: 10 + Math.random() * 10 });
       }
 
-      const fireLight = new THREE.PointLight(0xff8800, 5, 10);
-      fireLight.position.set(0, 1, 0);
+      const fireLight = new THREE.PointLight(0xff6600, 8, 15);
+      fireLight.position.set(0, 2, 0);
       fireGroup.add(fireLight);
 
-      // 3. Smoke meshes
-      const smokeGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+      // 3. Billowing Smoke Stream
+      const smokeGeo = new THREE.BoxGeometry(1, 1, 1);
       const smokeMat = new THREE.MeshLambertMaterial({ flatShading: true,
-        color: 0x222222,
+        color: 0x111111,
         transparent: true,
         opacity: 0.8
       });
-      const smokeMesh = new THREE.Mesh(smokeGeo, smokeMat);
-      smokeMesh.position.set(0, 2, 0);
-      fireGroup.add(smokeMesh);
+      
+      const smokeParticles: { mesh: THREE.Mesh, offset: number, speed: number, x: number, z: number }[] = [];
+      for(let i = 0; i < 15; i++) {
+        const smokeMesh = new THREE.Mesh(smokeGeo, smokeMat);
+        fireGroup.add(smokeMesh);
+        smokeParticles.push({
+          mesh: smokeMesh,
+          offset: Math.random(),
+          speed: 1 + Math.random(),
+          x: (Math.random() - 0.5) * 2,
+          z: (Math.random() - 0.5) * 2
+        });
+      }
 
       updatables.push({
         update(delta: number, time: number) {
-          const scale = 1 + Math.sin(time * 15) * 0.2;
-          fires.forEach(f => f.scale.set(1, scale, 1));
-          fireLight.intensity = 2 + Math.random() * 3;
+          // Animate fire
+          fires.forEach(f => {
+            const scaleY = 1 + Math.sin(time * f.speed + f.phase) * 0.4;
+            const scaleXZ = 1 + Math.cos(time * f.speed * 0.8 + f.phase) * 0.2;
+            f.mesh.scale.set(scaleXZ, scaleY, scaleXZ);
+          });
           
-          const t = time * 2;
-          const smokeY = 2 + (t % 2);
-          smokeMesh.position.y = smokeY;
-          smokeMesh.scale.setScalar(1 + (t % 2) * 0.5);
-          smokeMat.opacity = Math.max(0, 1 - (t % 2) / 2);
+          // Flicker light
+          fireLight.intensity = 5 + Math.random() * 5;
+          
+          // Animate smoke stream
+          smokeParticles.forEach(p => {
+            let progress = (time * p.speed + p.offset) % 1; // 0 to 1
+            
+            // Rise up and drift right (wind)
+            const y = 2 + progress * 8;
+            const x = p.x + progress * 4;
+            const z = p.z;
+            
+            p.mesh.position.set(x, y, z);
+            
+            // Expand and fade
+            const scale = 1 + progress * 3;
+            p.mesh.scale.set(scale, scale, scale);
+            
+            // Rotate randomly
+            p.mesh.rotation.y = time + p.offset * 10;
+            p.mesh.rotation.x = time * 0.5 + p.offset * 10;
+            
+            // Fade out
+            (p.mesh.material as THREE.Material).opacity = 0.8 * (1 - progress);
+          });
         }
       });
 

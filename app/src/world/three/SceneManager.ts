@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass.js';
 import { IsometricCamera } from './IsometricCamera';
 import { visualTokens } from '../../design/visualTokens';
 
@@ -72,11 +73,19 @@ export class SceneManager {
 
     const bloomPass = new UnrealBloomPass(
       new THREE.Vector2(container.clientWidth, container.clientHeight),
-      0.3,  // strength (much lower!)
+      0.35,  // strength
       0.5,  // radius
       1.5   // threshold (only affects highly emissive objects)
     );
     this.composer.addPass(bloomPass);
+
+    const bokehPass = new BokehPass(this.scene, this.camera, {
+      focus: 30, // Distance to the focal plane
+      aperture: 0.0001, // Size of aperture
+      maxblur: 0.015, // Max blur size
+      aspect: container.clientWidth / container.clientHeight
+    });
+    this.composer.addPass(bokehPass);
 
     this.worldGroup = new THREE.Group();
     this.scene.add(this.worldGroup);

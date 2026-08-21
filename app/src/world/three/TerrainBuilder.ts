@@ -11,8 +11,9 @@ export class TerrainBuilder {
     this.scene = scene;
   }
 
-  buildFromLayout(layout: TownLayout): THREE.Group {
+  buildFromLayout(layout: TownLayout): { group: THREE.Group, updatables: any[] } {
     const group = new THREE.Group();
+    const updatables: any[] = [];
     const p = visualTokens.palette;
 
     const grassMat = new THREE.MeshLambertMaterial({ color: p.grassLight });
@@ -32,6 +33,8 @@ export class TerrainBuilder {
     const islandMats = [dirtMat, dirtMat, grassMat, dirtMat, dirtMat, dirtMat];
     const terrainGeo = new THREE.BoxGeometry(CELL_SIZE, 2, CELL_SIZE);
     
+    const waterMeshes: { mesh: THREE.Mesh, ix: number, iy: number }[] = [];
+    
     const roadSet = new Set(layout.roads.map(p => `${p.x},${p.y}`));
     const waterSet = new Set(layout.water.map(p => `${p.x},${p.y}`));
     const plazaSet = new Set(layout.plazas.map(p => `${p.x},${p.y}`));
@@ -50,6 +53,7 @@ export class TerrainBuilder {
           waterMesh.position.set(worldX, -0.2, worldZ);
           waterMesh.receiveShadow = true;
           group.add(waterMesh);
+          waterMeshes.push({ mesh: waterMesh, ix: x, iy: y });
           
           const dirtMesh = new THREE.Mesh(new THREE.BoxGeometry(CELL_SIZE, 1, CELL_SIZE), dirtMat);
           dirtMesh.position.set(worldX, -1.5, worldZ);
@@ -106,8 +110,23 @@ export class TerrainBuilder {
     crustMesh.position.set(width / 2 - CELL_SIZE / 2, -2 - crustDepth / 2, depth / 2 - CELL_SIZE / 2);
     group.add(crustMesh);
 
+    // --- WATER ANIMATION ---
+    updatables.push({
+      update(delta: number, time: number) {
+        waterMeshes.forEach(w => {
+          // Choppy stylized wave effect
+          const offset = Math.sin(time * 2 + w.ix * 0.5 + w.iy * 0.5) * 0.05;
+          w.mesh.position.y = -0.2 + offset;
+          
+          // Slight tilt
+          w.mesh.rotation.x = -Math.PI / 2 + Math.cos(time * 1.5 + w.ix * 0.3) * 0.02;
+          w.mesh.rotation.y = Math.sin(time * 1.2 + w.iy * 0.4) * 0.02;
+        });
+      }
+    });
+
     group.position.set(-width / 2 + CELL_SIZE / 2, 0, -depth / 2 + CELL_SIZE / 2);
 
-    return group;
+    return { group, updatables };
   }
 }
