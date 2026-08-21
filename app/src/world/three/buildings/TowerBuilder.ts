@@ -31,6 +31,14 @@ function tagReveal(obj: THREE.Object3D, start: number, end: number) {
   obj.scale.set(0, 0, 0); // Initially hidden
 }
 
+function tagTempProp(obj: THREE.Object3D, start: number, end: number) {
+  obj.userData.isTempProp = true;
+  obj.userData.revealStart = start;
+  obj.userData.revealEnd = end;
+  obj.userData.baseScale = obj.scale.clone();
+  obj.scale.set(0, 0, 0); // Initially hidden
+}
+
 export function buildTower(config: {
   name: string;
   accent: string;
@@ -79,36 +87,34 @@ export function buildTower(config: {
   tagReveal(foundation, 0.05, 0.15);
   group.add(foundation);
 
-  // Construction Elements (Active 0.0 to 0.7)
+  // --- STAGE 0.0 - 0.2: FOUNDATION & CRANE ---
   const constructionGroup = new THREE.Group();
   
-  const pit = createFoundationPit(foundationSize + 0.5, foundationSize + 0.5);
-  pit.position.y = 0.1;
-  tagReveal(pit, 0.0, 0.2); // Pit disappears when foundation sets
+  const pit = createFoundationPit(plazaSize, plazaSize);
+  tagTempProp(pit, 0.0, 0.2); // Pit is filled in once skeleton rises
   constructionGroup.add(pit);
 
   const fence = createChainlinkFence(plazaSize + 0.2, plazaSize + 0.2);
-  tagReveal(fence, 0.0, 0.6); // Fence stays until mostly done
+  tagTempProp(fence, 0.0, 0.6); // Fence stays until mostly done
   constructionGroup.add(fence);
 
   const craneData = createTowerCrane(9.0); // Taller than the building, but not ridiculous
   const crane = craneData.group;
   crane.position.set(2.5, 0, -2.5); // Push it slightly further out
   crane.scale.set(1.4, 1.4, 1.4); // Scale the structure slightly
-  tagReveal(crane, 0.1, 0.75); // Crane leaves when skin is done
+  tagTempProp(crane, 0.1, 0.75); // Crane leaves when skin is done
   constructionGroup.add(crane);
   // We can also let the crane use its own internal updatable for spinning its head!
   // rotatingElements.push(crane); // We don't need this, we'll use craneData.updatable
 
-
   const truck = createDumpTruck();
   truck.position.set(2, 0, 2);
-  tagReveal(truck, 0.05, 0.4);
+  tagTempProp(truck, 0.05, 0.4);
   constructionGroup.add(truck);
   
   const stacks = createMaterialStacks();
   stacks.position.set(-2.5, 0, 2.5); // Place them on the grass
-  tagReveal(stacks, 0.0, 0.8); // Show during most of construction
+  tagTempProp(stacks, 0.0, 0.8); // Show during most of construction
   constructionGroup.add(stacks);
   
   // Temporary construction billboard showing the logo
@@ -122,17 +128,17 @@ export function buildTower(config: {
     building: { archetype: 'tower', accent: config.accent }
   });
   groundBillboard.scale.set(0.1, 0.1, 0.1);
-  groundBillboard.position.set(4, 1.5, 4); // On the grass edge
+  groundBillboard.position.set(4, 1.5, 4); // Fixed y height
   groundBillboard.rotation.y = -Math.PI / 4;
-  tagReveal(groundBillboard, 0.0, 0.95); // Disappears right before the roof sign takes over
+  tagTempProp(groundBillboard, 0.0, 0.95); // Disappears right before the roof sign takes over
   
   // Add some wooden stilts for the billboard
   const stiltMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, flatShading: true }); // dark wood
-  const stiltGeo = new THREE.CylinderGeometry(0.5, 0.5, 15);
+  const stiltGeo = new THREE.CylinderGeometry(0.5, 0.5, 30); // doubled height to reach ground
   const stilt1 = new THREE.Mesh(stiltGeo, stiltMat);
-  stilt1.position.set(-5, -7.5, -1);
+  stilt1.position.set(-5, -15, -1); // Shifted down 15 local units
   const stilt2 = new THREE.Mesh(stiltGeo, stiltMat);
-  stilt2.position.set(5, -7.5, -1);
+  stilt2.position.set(5, -15, -1);
   groundBillboard.add(stilt1);
   groundBillboard.add(stilt2);
 
@@ -273,47 +279,33 @@ export function buildTower(config: {
       // 1. Reveal/Hide logic
       group.traverse((child) => {
         if (child.userData.revealStart !== undefined) {
-          const { revealStart, revealEnd, baseScale } = child.userData;
+          const { revealStart, revealEnd, baseScale, isTempProp } = child.userData;
           
-          if (currentProgress < revealStart) {
-            child.scale.setScalar(0);
-          } else if (currentProgress > revealEnd) {
-            // For construction props that should DISAPPEAR when done
-            // If it's a crane (ends at 0.75), and progress > 0.75, it vanishes!
-            if (revealEnd < 1.0 && revealStart !== 0.0 && child.userData.isConstruction) {
-               child.scale.setScalar(0);
+          if (isTempProp) {
+            // Temp props pop in over 0.05 progress, stay at 1.0, then fade out over 0.05
+            if (currentProgress < revealStart) {
+              child.scale.setScalar(0);
+            } else if (currentProgress >= revealStart && currentProgress <= revealEnd) {
+              const t = Math.min(1.0, (currentProgress - revealStart) / 0.05);
+              const scale = easeOutElastic(t);
+              child.scale.copy(baseScale).multiplyScalar(scale);
             } else {
-               child.scale.copy(baseScale);
+              const t = 1.0 - Math.min(1.0, (currentProgress - revealEnd) / 0.05);
+              child.scale.copy(baseScale).multiplyScalar(Math.max(0, t));
             }
           } else {
-            // Animating
-            const t = (currentProgress - revealStart) / (revealEnd - revealStart);
-            const scale = easeOutElastic(t);
-            child.scale.copy(baseScale).multiplyScalar(scale);
-          }
-
-          // Hack for construction props that disappear
-          if (revealEnd < 1.0 && revealStart > 0.0 && currentProgress > revealEnd) {
-             // Let it disappear smoothly by reversing the ease?
-             // Simple: just clamp to 0 if it's past its window and it's a temp prop.
-             const isTemp = ["crane", "pit", "truck", "fence"].some(n => child.name.includes(n));
-             if (isTemp) {
-               const t = 1.0 - Math.min(1.0, (currentProgress - revealEnd) / 0.1); // fade out over 0.1 progress
-               child.scale.copy(baseScale).multiplyScalar(Math.max(0, t));
-             }
+            // Normal building components (grow over the entire start -> end window)
+            if (currentProgress < revealStart) {
+              child.scale.setScalar(0);
+            } else if (currentProgress > revealEnd) {
+              child.scale.copy(baseScale);
+            } else {
+              const t = (currentProgress - revealStart) / (revealEnd - revealStart);
+              const scale = easeOutElastic(t);
+              child.scale.copy(baseScale).multiplyScalar(scale);
+            }
           }
         }
-      });
-
-      // Fix temp props fade out
-      // To make things cleaner, let's just use simple logic for temp props:
-      const tempObjects = [crane, pit, truck, fence];
-      tempObjects.forEach(obj => {
-         const end = obj.userData.revealEnd;
-         if (currentProgress > end) {
-             const t = 1.0 - Math.min(1.0, (currentProgress - end) / 0.1);
-             obj.scale.copy(obj.userData.baseScale).multiplyScalar(Math.max(0, t));
-         }
       });
 
       // 2. Ambient Animations
