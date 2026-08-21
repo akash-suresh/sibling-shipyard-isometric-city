@@ -8,6 +8,7 @@ import { buildTower } from './TowerBuilder';
 import type { Updatable } from '../SceneManager';
 import { applyStatusEffects } from '../effects/StatusEffects';
 import { applyStageEffects } from '../effects/StageEffects';
+import { createBuildingSign } from './BuildingSign';
 
 export class BuildingFactory {
   createBuildings(projects: ProjectDefinition[], layout: TownLayout): { group: THREE.Group, updatables: Updatable[] } {
@@ -40,6 +41,31 @@ export class BuildingFactory {
 
       result.group.position.set(project.grid.x * CELL_SIZE, 0, project.grid.y * CELL_SIZE);
       result.group.userData = { projectId: project.id, projectName: project.name };
+      
+      // Add Roof Sign (Iteration 12)
+      const roofSign = createBuildingSign(project);
+      roofSign.scale.set(0.1, 0.1, 0.1);
+      roofSign.rotation.y = Math.PI / 4;
+      
+      // Add Ground Sign (Iteration 13)
+      const groundSign = roofSign.clone();
+      groundSign.scale.set(0.08, 0.08, 0.08); // slightly smaller for ground
+      
+      // Archetype specific sign placement
+      if (project.building.archetype === 'workshop') {
+        roofSign.position.set(0, 4.5, 0);
+        groundSign.position.set(2, 0.5, 2);
+      } else if (project.building.archetype === 'studio') {
+        roofSign.position.set(0, 5, 0);
+        groundSign.position.set(5, 0.5, 5);
+      } else if (project.building.archetype === 'tower') {
+        roofSign.position.set(0, 8, 0);
+        groundSign.position.set(3, 0.5, 3);
+      }
+      
+      result.group.add(roofSign);
+      result.group.add(groundSign);
+
       group.add(result.group);
 
       const statusUpdatables = applyStatusEffects(result.group, project.status);
