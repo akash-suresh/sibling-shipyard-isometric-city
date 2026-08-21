@@ -167,15 +167,16 @@ export class SceneManager {
     // Tween streetlights, windows, and neon signs
     this.scene.traverse((child) => {
       if (child instanceof THREE.PointLight && child.userData.isStreetlight) {
-        // Boosted intensity from 2.0 to 12.0 so they actually illuminate the road!
-        child.intensity = this.dayNightTransition * 12.0; 
+        // Reduced from 12.0 so overlapping intersections don't blow out
+        child.intensity = this.dayNightTransition * 6.0; 
       } else if (child instanceof THREE.Mesh) {
         const mat = child.material as THREE.MeshStandardMaterial;
         if (mat && mat.emissive) {
           if (child.userData.isWindow) {
-            mat.emissiveIntensity = THREE.MathUtils.lerp(0.8, 3.0, this.dayNightTransition); // Glow harder at night
+            mat.emissiveIntensity = THREE.MathUtils.lerp(0.8, 1.8, this.dayNightTransition); // Glow harder at night, but not blown out
           } else if (child.userData.isSign) {
-            mat.emissiveIntensity = THREE.MathUtils.lerp(0.0, 1.5, this.dayNightTransition); // Signs light up at night!
+            // Keep at 0.8 max so the logo colors don't clip to pure white
+            mat.emissiveIntensity = THREE.MathUtils.lerp(0.0, 0.8, this.dayNightTransition); 
           }
         }
       }

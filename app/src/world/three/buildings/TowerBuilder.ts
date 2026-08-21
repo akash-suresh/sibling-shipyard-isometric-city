@@ -34,7 +34,15 @@ export function buildTower(config: {
   const p = visualTokens.palette;
   const concreteMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, flatShading: true }); // Raw Concrete
   const steelMat = new THREE.MeshStandardMaterial({ color: 0x444455, flatShading: true });    // Exposed Steel
-  const glassMat = new THREE.MeshStandardMaterial({ color: 0xaaccff, transparent: true, opacity: 0.8, flatShading: true }); // Glass
+  const glassMat = new THREE.MeshStandardMaterial({ 
+    color: 0xaaccff, 
+    transparent: true, 
+    opacity: 0.8, 
+    flatShading: true,
+    emissive: 0x445533, // Tungsten glow
+    emissiveIntensity: 0.0
+  });
+  glassMat.userData.isWindow = true;
   const accentColor = parseInt(config.accent.replace('#', '0x'), 16) || p.nexus;
   const accentMat = new THREE.MeshStandardMaterial({ color: accentColor, flatShading: true, emissive: accentColor, emissiveIntensity: 0.5 }); // Emissive Accent
   

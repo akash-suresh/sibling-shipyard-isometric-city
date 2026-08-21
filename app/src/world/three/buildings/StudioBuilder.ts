@@ -21,7 +21,7 @@ export function buildStudio(config: {
   const p = visualTokens.palette;
   const concreteMat = new THREE.MeshStandardMaterial({ color: p.concrete, flatShading: true });
   const wallMat = new THREE.MeshStandardMaterial({ color: p.structure, flatShading: true });
-  const glassMat = new THREE.MeshStandardMaterial({ color: p.glass, emissive: 0x332200, flatShading: true });
+  const glassMat = new THREE.MeshStandardMaterial({ color: p.glass, emissive: 0x445533, flatShading: true });
   glassMat.userData.isWindow = true;
   const accentColor = new THREE.Color(config.accent || p.spark);
   const accentMat = new THREE.MeshStandardMaterial({ color: accentColor, flatShading: true });

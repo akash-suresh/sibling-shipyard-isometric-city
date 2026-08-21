@@ -24,7 +24,7 @@ export function buildWorkshop(config: {
   const steelMat = new THREE.MeshStandardMaterial({ color: p.metal, flatShading: true });
   const constructionYellowMat = new THREE.MeshStandardMaterial({ color: p.crane, flatShading: true });
   const scaffoldOrangeMat = new THREE.MeshStandardMaterial({ color: p.craneShadow, flatShading: true });
-  const windowMat = new THREE.MeshStandardMaterial({ color: p.glass, emissive: 0x332510, emissiveIntensity: 0.8, flatShading: true });
+  const windowMat = new THREE.MeshStandardMaterial({ color: p.glass, emissive: 0x445533, emissiveIntensity: 0.8, flatShading: true });
   windowMat.userData.isWindow = true;
   const workerMat = new THREE.MeshStandardMaterial({ color: 0xCDDC39, flatShading: true }); // hi-vis green/yellow
   const hatMat = new THREE.MeshStandardMaterial({ color: 0xFFC107, flatShading: true });
