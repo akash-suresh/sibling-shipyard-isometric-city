@@ -120,11 +120,11 @@ export class DecorBuilder {
 
     monumentGroup.add(line1, line2);
 
-    // Scale down to fit the plaza
-    monumentGroup.scale.set(0.15, 0.15, 0.15);
+    // Scale down to fit the plaza (increased to make it massive)
+    monumentGroup.scale.set(0.4, 0.4, 0.4);
 
     // Give it a sleek base
-    const baseGeo = new THREE.BoxGeometry(6, 0.5, 2);
+    const baseGeo = new THREE.BoxGeometry(7, 0.5, 2.5);
     const baseMat = new THREE.MeshLambertMaterial({ color: p.metal, flatShading: true });
     const baseMesh = new THREE.Mesh(baseGeo, baseMat);
     baseMesh.position.y = 0.25;

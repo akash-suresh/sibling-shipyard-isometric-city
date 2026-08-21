@@ -83,11 +83,11 @@ export class BuildingFactory {
       let targetScaleZ = 1;
       
       if (project.building.archetype === 'workshop') {
-        targetScaleX = targetScaleY = targetScaleZ = 1.2; // From 0.6 -> 1.2
+        targetScaleX = targetScaleY = targetScaleZ = 2.5; // Massively chunky
       } else if (project.building.archetype === 'studio') {
-        targetScaleX = targetScaleY = targetScaleZ = 1.1; // From 0.75 -> 1.1
+        targetScaleX = targetScaleY = targetScaleZ = 2.5; 
       } else if (project.building.archetype === 'tower') {
-        targetScaleX = targetScaleY = targetScaleZ = 1.5; // From 1.0 -> 1.5
+        targetScaleX = targetScaleY = targetScaleZ = 3.2; // Massive tower
       }
 
       result.group.scale.set(0, 0, 0); // Start tiny

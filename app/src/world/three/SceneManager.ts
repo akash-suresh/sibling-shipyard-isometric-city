@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { IsometricCamera } from './IsometricCamera';
 import { visualTokens } from '../../design/visualTokens';
 
@@ -52,10 +52,10 @@ export class SceneManager {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     container.appendChild(this.renderer.domElement);
 
-    const ambientLight = new THREE.AmbientLight(0xfff0e6, 0.55); // Slightly warm ambient
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
     this.scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.1); // Stronger sun
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.5); // Stronger sun
     dirLight.position.set(-30, 25, 5); // Lower angle, more sideways for long shadows
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 2048;
@@ -79,13 +79,8 @@ export class SceneManager {
     );
     this.composer.addPass(bloomPass);
 
-    const bokehPass = new BokehPass(this.scene, this.camera, {
-      focus: 30, // Distance to the focal plane
-      aperture: 0.0001, // Size of aperture
-      maxblur: 0.015, // Max blur size
-      aspect: container.clientWidth / container.clientHeight
-    });
-    this.composer.addPass(bokehPass);
+    const outputPass = new OutputPass();
+    this.composer.addPass(outputPass);
 
     this.worldGroup = new THREE.Group();
     this.scene.add(this.worldGroup);
@@ -105,7 +100,7 @@ export class SceneManager {
 
   resize(): void {
     const aspect = this.container.clientWidth / this.container.clientHeight;
-    const frustumSize = 20;
+    const frustumSize = 12;
     this.camera.left = -frustumSize * aspect;
     this.camera.right = frustumSize * aspect;
     this.camera.top = frustumSize;
