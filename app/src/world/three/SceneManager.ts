@@ -3,6 +3,7 @@ import { WebGPURenderer, PostProcessing } from 'three/webgpu';
 import { pass, mrt, output, emissive, normalView } from 'three/tsl';
 import { bloom } from 'three/examples/jsm/tsl/display/BloomNode.js';
 import { ao } from 'three/examples/jsm/tsl/display/GTAONode.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { IsometricCamera } from './IsometricCamera';
 import { visualTokens } from '../../design/visualTokens';
 
@@ -105,6 +106,8 @@ export class SceneManager {
 
     this.clock = new THREE.Timer();
 
+    // (PMREMGenerator moved to async init block)
+
     this.cameraControls = new IsometricCamera(this.camera, this.renderer.domElement);
     this.cameraControls.enableDrag();
     this.cameraControls.enableZoom(0.5, 3.0);
@@ -140,6 +143,14 @@ export class SceneManager {
 
   setNightMode(isNight: boolean): void {
     this.isNightMode = isNight;
+  }
+  
+  setGlobalProgress(progress: number): void {
+    this.updatables.forEach(u => {
+      if ((u as any).setProgress) {
+        (u as any).setProgress(progress);
+      }
+    });
   }
 
   update(): void {

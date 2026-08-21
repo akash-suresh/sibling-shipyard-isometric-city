@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { MeshStandardNodeMaterial } from 'three/webgpu';
+import { color, mx_fractal_noise_float, mx_noise_float, positionWorld, vec3, smoothstep, mix, float, positionLocal, fract, step } from 'three/tsl';
 import type { Updatable } from '../SceneManager';
 import { visualTokens } from '../../../design/visualTokens';
 import { 
@@ -42,26 +44,55 @@ function tagTempProp(obj: THREE.Object3D, start: number, end: number) {
 export function buildTower(config: {
   name: string;
   accent: string;
-  status: 'building' | 'live' | 'incident' | 'archived';
-  stage: 'idea' | 'prototype' | 'shipped' | 'landmark';
-  logo?: string;
+  status: string;
+  stage: string;
 }): BuildingResult {
   const group = new THREE.Group();
   
   // 1. Materials (The 4-Material Rule)
   const p = visualTokens.palette;
-  const concreteMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, flatShading: true }); // Raw Concrete
-  const steelMat = new THREE.MeshStandardMaterial({ color: 0x444455, flatShading: true });    // Exposed Steel
-  const glassMat = new THREE.MeshStandardMaterial({ 
-    color: 0xaaccff, 
-    transparent: true, 
-    opacity: 0.8, 
-    flatShading: true,
-    emissive: 0x445533, // Tungsten glow
-    emissiveIntensity: 0.0
-  });
-  glassMat.userData.isWindow = true;
+  // TSL Procedural Concrete
+  const concreteMat = new MeshStandardNodeMaterial({ flatShading: true });
+  const cBase = color(0xcccccc);
+  const cSoot = color(0x555555);
+  const cTone = mx_fractal_noise_float( positionWorld.mul( 0.05 ), 2 ).mul( 0.15 );
+  const cStreak = mx_fractal_noise_float( vec3( positionWorld.x.mul( 1.5 ), positionWorld.y.mul( 0.1 ), positionWorld.z.mul( 1.5 ) ), 2 );
+  const cDirt = smoothstep( -0.1, 0.45, cStreak ).mul(0.4);
+  concreteMat.colorNode = mix(cBase, cSoot, cDirt).add(cTone);
+  concreteMat.roughnessNode = float(0.9);
+
+  // TSL Procedural Steel
+  const steelMat = new MeshStandardNodeMaterial({ flatShading: true });
+  const sBase = color(0x444455);
+  const sRust = color(0x332211);
+  const sNoise = mx_noise_float( positionWorld.mul( 0.5 ) );
+  steelMat.colorNode = mix(sBase, sRust, sNoise.mul(0.3));
+  steelMat.roughnessNode = float(0.4);
+  steelMat.metalnessNode = float(0.8);
+
+  // TSL Procedural Tech Glass
   const accentColor = parseInt(config.accent.replace('#', '0x'), 16) || p.nexus;
+  const glassMat = new MeshStandardNodeMaterial({ 
+    transparent: true, 
+    opacity: 0.9, 
+    flatShading: true
+  });
+  
+  // Create a glowing grid for windows using positionLocal
+  // Multiplying by 2 means each 1 unit box gets 2 windows
+  const gridX = step(0.1, fract(positionLocal.x.mul(3.0)));
+  const gridY = step(0.1, fract(positionLocal.y.mul(3.0)));
+  const gridZ = step(0.1, fract(positionLocal.z.mul(3.0)));
+  
+  // The window is lit if it's NOT on a grid line
+  // By multiplying all three, we ensure it only lights up in the center of the "panes"
+  const isWindow = gridX.mul(gridY).mul(gridZ);
+  
+  glassMat.colorNode = mix(color(0x112233), color(accentColor), isWindow.mul(0.3));
+  // The emissive glow is controlled by the window grid
+  glassMat.emissiveNode = mix(color(0x000000), color(accentColor).mul(0.5), isWindow);
+  glassMat.roughnessNode = float(0.1);
+  glassMat.metalnessNode = float(0.9);
   const accentMat = new THREE.MeshStandardMaterial({ color: accentColor, flatShading: true, emissive: accentColor, emissiveIntensity: 0.5 }); // Emissive Accent
   
   // Base constants
@@ -118,33 +149,7 @@ export function buildTower(config: {
   tagTempProp(stacks, 0.0, 0.8); // Show during most of construction
   constructionGroup.add(stacks);
   
-  // Temporary construction billboard showing the logo
-  const groundBillboard = createBuildingSign({
-    id: 'temp',
-    name: config.name,
-    summary: '',
-    status: config.status,
-    stage: config.stage,
-    logo: config.logo,
-    grid: { x: 0, y: 0 },
-    building: { archetype: 'tower', accent: config.accent }
-  }, true);
-  groundBillboard.scale.set(0.1, 0.1, 0.1);
-  groundBillboard.position.set(-4, 1.5, 4); // Moved to front-left edge of the grass!
-  groundBillboard.rotation.y = -Math.PI / 4;
-  tagTempProp(groundBillboard, 0.0, 0.95); // Disappears right before the roof sign takes over
-  
-  // Add some wooden stilts for the billboard
-  const stiltMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, flatShading: true }); // dark wood
-  const stiltGeo = new THREE.CylinderGeometry(0.5, 0.5, 30); // doubled height to reach ground
-  const stilt1 = new THREE.Mesh(stiltGeo, stiltMat);
-  stilt1.position.set(-5, -15, -1); // Shifted down 15 local units
-  const stilt2 = new THREE.Mesh(stiltGeo, stiltMat);
-  stilt2.position.set(5, -15, -1);
-  groundBillboard.add(stilt1);
-  groundBillboard.add(stilt2);
-
-  constructionGroup.add(groundBillboard);
+  // (Temp billboard removed per user request)
   
   group.add(constructionGroup);
 
@@ -265,9 +270,13 @@ export function buildTower(config: {
   let targetProgress = stageMap[config.stage] || 0.2;
   let currentProgress = targetProgress; // Start fully built on page load
 
-  const updatable: Updatable & { setStage?: (stage: string) => void } = {
+  const updatable: Updatable & { setStage?: (stage: string) => void, setProgress?: (p: number) => void } = {
     setStage: (stage: string) => {
       targetProgress = stageMap[stage] || 0.2;
+    },
+    setProgress: (progress: number) => {
+      targetProgress = progress;
+      currentProgress = progress; // Instant jump for scrubbing
     },
     update: (delta, time) => {
       // Linear scrub for smooth elastic playback

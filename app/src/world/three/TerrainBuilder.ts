@@ -1,6 +1,9 @@
 import * as THREE from 'three';
+import { MeshStandardNodeMaterial } from 'three/webgpu';
+import { color, mx_noise_float, positionWorld, positionLocal, normalLocal, vec3, smoothstep, mix, float, time } from 'three/tsl';
 import type { TownLayout } from '../layout/townLayout';
 import { visualTokens } from '../../design/visualTokens';
+import { createCrowdSystem } from './actors/CrowdSystem';
 
 export const CELL_SIZE = 2;
 
@@ -16,13 +19,24 @@ export class TerrainBuilder {
     const updatables: any[] = [];
     const p = visualTokens.palette;
 
-    const grassMat = new THREE.MeshStandardMaterial({ color: p.grassLight });
+    // Procedural TSL Grass
+    const grassMat = new MeshStandardNodeMaterial({ flatShading: true });
+    const grassNoise = mx_noise_float(positionWorld.mul(0.4));
+    grassMat.colorNode = mix(color(p.grassLight), color('#56a64b'), grassNoise); // Blend with slightly darker green
+    
     const dirtMat = new THREE.MeshStandardMaterial({ color: p.soil });
     const roadMat = new THREE.MeshStandardMaterial({ color: p.road });
     const whiteMat = new THREE.MeshStandardMaterial({ color: p.roadMarking });
     
-    // Solid, stylized water block
-    const waterMat = new THREE.MeshStandardMaterial({ color: p.water });
+    // Procedural TSL Water (Flowing river with foam!)
+    const waterMat = new MeshStandardNodeMaterial({ transparent: true, opacity: 0.9, flatShading: true });
+    const t = time.mul(0.5); // time
+    const waterNoise = mx_noise_float(positionWorld.mul(0.5).add(vec3(t, float(0), t)));
+    const foam = smoothstep(0.7, 0.9, waterNoise);
+    waterMat.colorNode = mix(color(p.water), color(0xffffff), foam.mul(0.5)); // White foam tips
+    const elevation = waterNoise.mul(0.2);
+    waterMat.positionNode = positionLocal.add(normalLocal.mul(elevation));
+    waterMat.roughnessNode = float(0.1);
 
     const bridgeMat = new THREE.MeshStandardMaterial({ color: p.metal });
     const concreteMat = new THREE.MeshStandardMaterial({ color: p.plaza });
@@ -30,7 +44,7 @@ export class TerrainBuilder {
     const width = layout.width * CELL_SIZE;
     const depth = layout.height * CELL_SIZE;
     
-    const islandMats = [dirtMat, dirtMat, grassMat, dirtMat, dirtMat, dirtMat];
+    const islandMats = [dirtMat, dirtMat, grassMat as any, dirtMat, dirtMat, dirtMat];
     const terrainGeo = new THREE.BoxGeometry(CELL_SIZE, 2, CELL_SIZE);
     
     const waterMeshes: { mesh: THREE.Mesh, ix: number, iy: number }[] = [];
@@ -47,8 +61,8 @@ export class TerrainBuilder {
         const worldZ = y * CELL_SIZE;
 
         if (waterSet.has(key)) {
-          const waterGeo = new THREE.PlaneGeometry(CELL_SIZE, CELL_SIZE);
-          const waterMesh = new THREE.Mesh(waterGeo, waterMat);
+          const waterGeo = new THREE.PlaneGeometry(CELL_SIZE, CELL_SIZE, 4, 4); // Subdivided for TSL vertex displacement
+          const waterMesh = new THREE.Mesh(waterGeo, waterMat as any);
           waterMesh.rotation.x = -Math.PI / 2;
           waterMesh.position.set(worldX, -0.2, worldZ);
           waterMesh.receiveShadow = true;
@@ -113,15 +127,7 @@ export class TerrainBuilder {
     // --- WATER ANIMATION ---
     updatables.push({
       update(delta: number, time: number) {
-        waterMeshes.forEach(w => {
-          // Choppy stylized wave effect
-          const offset = Math.sin(time * 2 + w.ix * 0.5 + w.iy * 0.5) * 0.05;
-          w.mesh.position.y = -0.2 + offset;
-          
-          // Slight tilt
-          w.mesh.rotation.x = -Math.PI / 2 + Math.cos(time * 1.5 + w.ix * 0.3) * 0.02;
-          w.mesh.rotation.y = Math.sin(time * 1.2 + w.iy * 0.4) * 0.02;
-        });
+        // Handled by TSL
       }
     });
 
