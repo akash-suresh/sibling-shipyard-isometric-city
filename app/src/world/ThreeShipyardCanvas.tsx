@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import { useEffect, useRef, useState } from "react";
 import { SceneManager } from "./three/SceneManager";
 import { TerrainBuilder } from "./three/TerrainBuilder";
@@ -19,11 +20,15 @@ export function ThreeShipyardCanvas({ projects, isNightMode = false }: { project
     }
   }, [isNightMode]);
 
+  const buildingsContainerRef = useRef<THREE.Group>(new THREE.Group());
+  const buildingUpdatablesRef = useRef<import('./three/SceneManager').Updatable[]>([]);
+
   useEffect(() => {
     if (!hostRef.current) return;
 
     const manager = new SceneManager(hostRef.current);
     sceneManagerRef.current = manager;
+    buildingFactoryRef.current = new BuildingFactory();
 
     const terrainBuilder = new TerrainBuilder(manager.scene);
     const { group: terrain, updatables: terrainUpdatables } = terrainBuilder.buildFromLayout(shipyardZeroLayout);
@@ -34,16 +39,12 @@ export function ThreeShipyardCanvas({ projects, isNightMode = false }: { project
     const decor = decorBuilder.placeDecor(shipyardZeroLayout);
     manager.worldGroup.add(decor);
 
-    const buildingFactory = new BuildingFactory();
-    const { group: buildingsGroup, updatables } = buildingFactory.createBuildings(projects, shipyardZeroLayout);
-    manager.worldGroup.add(buildingsGroup);
-
-    updatables.forEach(u => manager.registerUpdatable(u));
+    manager.worldGroup.add(buildingsContainerRef.current);
 
     const ambientLife = new AmbientLife(shipyardZeroLayout, manager.worldGroup);
     manager.registerUpdatable(ambientLife);
 
-    const selectionManager = new SelectionManager(manager.camera, manager.scene, buildingsGroup, manager.renderer.domElement);
+    const selectionManager = new SelectionManager(manager.camera, manager.scene, buildingsContainerRef.current, manager.renderer.domElement);
     selectionManager.onSelect((id, pos) => {
       setSelectedProjectId(id);
       if (id && pos) {
@@ -57,12 +58,34 @@ export function ThreeShipyardCanvas({ projects, isNightMode = false }: { project
       ambientLife.dispose();
       manager.unregisterUpdatable(selectionManager);
       manager.unregisterUpdatable(ambientLife);
-      updatables.forEach(u => manager.unregisterUpdatable(u));
       terrainUpdatables.forEach(u => manager.unregisterUpdatable(u));
       manager.dispose();
       sceneManagerRef.current = null;
     };
   }, []);
+
+  const buildingFactoryRef = useRef<BuildingFactory>(new BuildingFactory());
+
+  // Update buildings when projects prop changes
+  useEffect(() => {
+    const manager = sceneManagerRef.current;
+    if (!manager) return;
+
+    // Build new buildings
+    const factory = buildingFactoryRef.current;
+    const { group: buildingsGroup, updatables } = factory.createBuildings(projects, shipyardZeroLayout);
+    
+    // Unregister old updatables and register new ones
+    buildingUpdatablesRef.current.forEach(u => manager.unregisterUpdatable(u));
+    updatables.forEach(u => manager.registerUpdatable(u));
+    buildingUpdatablesRef.current = updatables;
+    
+    // Replace the buildings in the container
+    buildingsContainerRef.current.clear();
+    buildingsContainerRef.current.add(buildingsGroup);
+
+  }, [projects]);
+
 
   const selectedProject = selectedProjectId ? projects.find(p => p.id === selectedProjectId) : null;
 

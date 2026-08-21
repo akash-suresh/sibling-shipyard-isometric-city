@@ -16,16 +16,16 @@ export class TerrainBuilder {
     const updatables: any[] = [];
     const p = visualTokens.palette;
 
-    const grassMat = new THREE.MeshLambertMaterial({ color: p.grassLight });
-    const dirtMat = new THREE.MeshLambertMaterial({ color: p.soil });
-    const roadMat = new THREE.MeshLambertMaterial({ color: p.road });
-    const whiteMat = new THREE.MeshLambertMaterial({ color: p.roadMarking });
+    const grassMat = new THREE.MeshStandardMaterial({ color: p.grassLight });
+    const dirtMat = new THREE.MeshStandardMaterial({ color: p.soil });
+    const roadMat = new THREE.MeshStandardMaterial({ color: p.road });
+    const whiteMat = new THREE.MeshStandardMaterial({ color: p.roadMarking });
     
     // Solid, stylized water block
-    const waterMat = new THREE.MeshLambertMaterial({ color: p.water });
+    const waterMat = new THREE.MeshStandardMaterial({ color: p.water });
 
-    const bridgeMat = new THREE.MeshLambertMaterial({ color: p.metal });
-    const concreteMat = new THREE.MeshLambertMaterial({ color: p.plaza });
+    const bridgeMat = new THREE.MeshStandardMaterial({ color: p.metal });
+    const concreteMat = new THREE.MeshStandardMaterial({ color: p.plaza });
 
     const width = layout.width * CELL_SIZE;
     const depth = layout.height * CELL_SIZE;
@@ -105,7 +105,7 @@ export class TerrainBuilder {
     // --- DIORAMA CRUST FOUNDATION ---
     const crustDepth = 1.5;
     const crustGeo = new THREE.BoxGeometry(width, crustDepth, depth);
-    const crustMat = new THREE.MeshLambertMaterial({ color: p.rock, flatShading: true });
+    const crustMat = new THREE.MeshStandardMaterial({ color: p.rock, flatShading: true });
     const crustMesh = new THREE.Mesh(crustGeo, crustMat);
     crustMesh.position.set(width / 2 - CELL_SIZE / 2, -2 - crustDepth / 2, depth / 2 - CELL_SIZE / 2);
     group.add(crustMesh);

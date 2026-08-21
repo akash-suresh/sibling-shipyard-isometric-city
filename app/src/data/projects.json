@@ -1,44 +1,46 @@
 [
   {
-    "id": "orion",
-    "name": "Orion",
-    "summary": "An ambitious project taking shape in the yard.",
-    "stage": "prototype",
-    "status": "building",
-    "grid": { "x": 4, "y": 16 },
+    "id": "coach-hq",
+    "name": "Coach HQ",
+    "summary": "The central hub for all coaching services.",
+    "stage": "shipped",
+    "status": "live",
+    "grid": { "x": 15, "y": 5 },
     "building": {
-      "archetype": "workshop",
-      "accent": "#ef8354"
+      "archetype": "tower",
+      "accent": "#4a6fa5"
     },
-    "latestMilestone": "Working prototype",
-    "nextMilestone": "Public Beta"
+    "logo": "/coach-hq-logo.png",
+    "latestMilestone": "V1 Released",
+    "nextMilestone": "V2 Planning"
   },
   {
-    "id": "spark",
-    "name": "Spark",
+    "id": "3-of-spades",
+    "name": "3 of Spades",
     "summary": "A small live product with a bright pulse.",
     "stage": "shipped",
     "status": "live",
     "grid": { "x": 20, "y": 16 },
     "building": {
       "archetype": "studio",
-      "accent": "#f4c95d"
+      "accent": "#143122"
     },
+    "logo": "/3-of-spades-logo.png",
     "latestMilestone": "First release",
     "nextMilestone": "100 active users"
   },
   {
-    "id": "nexus",
-    "name": "Nexus",
-    "summary": "A growing platform becoming a Shipyard landmark.",
-    "stage": "landmark",
-    "status": "live",
-    "grid": { "x": 14, "y": 4 },
+    "id": "one-percent",
+    "name": "1%",
+    "summary": "An early prototype taking shape on the riverbank.",
+    "stage": "prototype",
+    "status": "building",
+    "grid": { "x": 6, "y": 18 },
     "building": {
-      "archetype": "tower",
-      "accent": "#6c7bd9"
+      "archetype": "workshop",
+      "accent": "#dd7373"
     },
-    "latestMilestone": "1,000 users",
-    "nextMilestone": "Landmark status"
+    "latestMilestone": "Core loop defined",
+    "nextMilestone": "Beta launch"
   }
 ]

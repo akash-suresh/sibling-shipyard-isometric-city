@@ -13,25 +13,26 @@ export function buildStudio(config: {
   accent: string;
   status: string;
   stage: string;
+  logo?: string;
 }): BuildingResult {
   const group = new THREE.Group();
 
   // Materials
   const p = visualTokens.palette;
-  const concreteMat = new THREE.MeshLambertMaterial({ color: p.concrete, flatShading: true });
-  const wallMat = new THREE.MeshLambertMaterial({ color: p.structure, flatShading: true });
-  const glassMat = new THREE.MeshLambertMaterial({ color: p.glass, emissive: 0x332200, flatShading: true });
+  const concreteMat = new THREE.MeshStandardMaterial({ color: p.concrete, flatShading: true });
+  const wallMat = new THREE.MeshStandardMaterial({ color: p.structure, flatShading: true });
+  const glassMat = new THREE.MeshStandardMaterial({ color: p.glass, emissive: 0x332200, flatShading: true });
   glassMat.userData.isWindow = true;
   const accentColor = new THREE.Color(config.accent || p.spark);
-  const accentMat = new THREE.MeshLambertMaterial({ color: accentColor, flatShading: true });
-  const doorwayMat = new THREE.MeshLambertMaterial({ color: 0x222222, flatShading: true });
-  const hvacMat = new THREE.MeshLambertMaterial({ color: p.metal, flatShading: true });
-  const bushMat = new THREE.MeshLambertMaterial({ color: p.hedge, flatShading: true });
-  const pathMat = new THREE.MeshLambertMaterial({ color: p.sidewalk, flatShading: true });
-  const woodMat = new THREE.MeshLambertMaterial({ color: p.soil, flatShading: true });
-  const cartMat = new THREE.MeshLambertMaterial({ color: 0xFF5722, flatShading: true });
-  const wheelMat = new THREE.MeshLambertMaterial({ color: 0x222222, flatShading: true });
-  const beaconMat = new THREE.MeshLambertMaterial({ color: p.activeLight, emissive: p.activeLight, emissiveIntensity: 1, flatShading: true });
+  const accentMat = new THREE.MeshStandardMaterial({ color: accentColor, flatShading: true });
+  const doorwayMat = new THREE.MeshStandardMaterial({ color: 0x222222, flatShading: true });
+  const hvacMat = new THREE.MeshStandardMaterial({ color: p.metal, flatShading: true });
+  const bushMat = new THREE.MeshStandardMaterial({ color: p.hedge, flatShading: true });
+  const pathMat = new THREE.MeshStandardMaterial({ color: p.sidewalk, flatShading: true });
+  const woodMat = new THREE.MeshStandardMaterial({ color: p.soil, flatShading: true });
+  const cartMat = new THREE.MeshStandardMaterial({ color: 0xFF5722, flatShading: true });
+  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x222222, flatShading: true });
+  const beaconMat = new THREE.MeshStandardMaterial({ color: p.activeLight, emissive: p.activeLight, emissiveIntensity: 1, flatShading: true });
 
   // 1. Building base
   const baseW = 9, baseH = 0.4, baseD = 7;
@@ -185,26 +186,31 @@ export function buildStudio(config: {
     });
   }
 
-  // 5. SPARK signage
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 128;
-  const ctx = canvas.getContext('2d');
-  if (ctx) {
-    ctx.fillStyle = config.accent;
-    ctx.fillRect(0, 0, 512, 128);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 80px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(config.name.toUpperCase(), 256, 64);
+  // Signage handled by BuildingFactory, but if there's a logo, paint it on the roof!
+  if (config.logo) {
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.load(config.logo, (texture) => {
+      const aspect = texture.image.width / texture.image.height;
+      const logoW = 8;
+      const logoD = logoW / aspect;
+      
+      const paintedLogo = new THREE.Mesh(
+        new THREE.PlaneGeometry(logoW, logoD),
+        new THREE.MeshStandardMaterial({ 
+          map: texture, 
+          transparent: true,
+          roughness: 0.8,
+          metalness: 0.1
+        })
+      );
+      
+      paintedLogo.rotation.x = -Math.PI / 2;
+      paintedLogo.rotation.z = Math.PI / 2; // Read from front (+X)
+      // Raise it slightly above the concrete core to avoid Z-fighting
+      paintedLogo.position.set(0, 0.05, 0); 
+      roofGroup.add(paintedLogo);
+    });
   }
-  
-  const signTex = new THREE.CanvasTexture(canvas);
-  const signMat = new THREE.MeshStandardMaterial({ map: signTex });
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(4, 1), signMat);
-  sign.position.set(0, totalH - 1, buildD / 2 + 0.02);
-  buildingBody.add(sign);
 
   // 6. Landscaping
   

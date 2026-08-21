@@ -19,16 +19,16 @@ export function buildWorkshop(config: {
   const p = visualTokens.palette;
   
   // Materials
-  const concreteMat = new THREE.MeshLambertMaterial({ color: p.concrete, flatShading: true });
-  const darkConcreteMat = new THREE.MeshLambertMaterial({ color: p.concreteShadow, flatShading: true });
-  const steelMat = new THREE.MeshLambertMaterial({ color: p.metal, flatShading: true });
-  const constructionYellowMat = new THREE.MeshLambertMaterial({ color: p.crane, flatShading: true });
-  const scaffoldOrangeMat = new THREE.MeshLambertMaterial({ color: p.craneShadow, flatShading: true });
-  const windowMat = new THREE.MeshLambertMaterial({ color: p.glass, emissive: 0x332510, emissiveIntensity: 0.8, flatShading: true });
+  const concreteMat = new THREE.MeshStandardMaterial({ color: p.concrete, flatShading: true });
+  const darkConcreteMat = new THREE.MeshStandardMaterial({ color: p.concreteShadow, flatShading: true });
+  const steelMat = new THREE.MeshStandardMaterial({ color: p.metal, flatShading: true });
+  const constructionYellowMat = new THREE.MeshStandardMaterial({ color: p.crane, flatShading: true });
+  const scaffoldOrangeMat = new THREE.MeshStandardMaterial({ color: p.craneShadow, flatShading: true });
+  const windowMat = new THREE.MeshStandardMaterial({ color: p.glass, emissive: 0x332510, emissiveIntensity: 0.8, flatShading: true });
   windowMat.userData.isWindow = true;
-  const workerMat = new THREE.MeshLambertMaterial({ color: 0xCDDC39, flatShading: true }); // hi-vis green/yellow
-  const hatMat = new THREE.MeshLambertMaterial({ color: 0xFFC107, flatShading: true });
-  const woodMat = new THREE.MeshLambertMaterial({ color: p.soil, flatShading: true });
+  const workerMat = new THREE.MeshStandardMaterial({ color: 0xCDDC39, flatShading: true }); // hi-vis green/yellow
+  const hatMat = new THREE.MeshStandardMaterial({ color: 0xFFC107, flatShading: true });
+  const woodMat = new THREE.MeshStandardMaterial({ color: p.soil, flatShading: true });
 
   const stageIndex = Math.max(0, ["idea", "prototype", "shipped", "landmark"].indexOf(config.stage));
 
@@ -140,7 +140,8 @@ export function buildWorkshop(config: {
   let updatable: Updatable | undefined;
   if (stageIndex >= 2 && config.status === "building") {
     const crane = createTowerCrane(4.0);
-    crane.group.position.set(-0.6, 0.1, -0.6);
+    // Move to top-right (isometric right) so it is not hidden behind the structure
+    crane.group.position.set(1.5, 0.1, -1.5);
     group.add(crane.group);
     updatable = crane.updatable;
   }
@@ -206,7 +207,7 @@ export function buildWorkshop(config: {
     
     const signTex = new THREE.CanvasTexture(canvas);
     signTex.colorSpace = THREE.SRGBColorSpace;
-    const signMat = new THREE.MeshLambertMaterial({ map: signTex, flatShading: true });
+    const signMat = new THREE.MeshStandardMaterial({ map: signTex, flatShading: true });
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.3), signMat);
     sign.position.set(0, fHeight / 2 + 0.1, (padD - 0.1) / 2 + 0.025);
     fenceGroup.add(sign);

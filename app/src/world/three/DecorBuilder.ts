@@ -2,7 +2,21 @@ import * as THREE from 'three';
 import type { TownLayout } from '../layout/townLayout';
 import { CELL_SIZE } from './TerrainBuilder';
 import { visualTokens } from '../../design/visualTokens';
-import { createVoxelText } from './utils/VoxelText';
+import { FontLoader, Font } from 'three/examples/jsm/loaders/FontLoader.js';
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
+
+let cachedFont: Font | null = null;
+const loader = new FontLoader();
+function loadFont(callback: (font: Font) => void) {
+  if (cachedFont) {
+    callback(cachedFont);
+    return;
+  }
+  loader.load('/fonts/helvetiker_bold.typeface.json', (font) => {
+    cachedFont = font;
+    callback(font);
+  });
+}
 
 export class DecorBuilder {
   scene: THREE.Scene;
@@ -15,14 +29,14 @@ export class DecorBuilder {
     const group = new THREE.Group();
     const p = visualTokens.palette;
 
-    const dirtMat = new THREE.MeshLambertMaterial({ color: p.soil, flatShading: true });
-    const grassMat = new THREE.MeshLambertMaterial({ color: p.hedge, flatShading: true });
-    const poleMat = new THREE.MeshLambertMaterial({ color: p.metal, flatShading: true });
-    const lampMat = new THREE.MeshLambertMaterial({ color: p.activeLight, emissive: p.activeLight, emissiveIntensity: 1, flatShading: true });
-    const woodMat = new THREE.MeshLambertMaterial({ color: p.soil, flatShading: true });
-    const shrubMat = new THREE.MeshLambertMaterial({ color: p.hedgeShadow, flatShading: true });
-    const flowerMat = new THREE.MeshLambertMaterial({ color: 0xE91E63, flatShading: true });
-    const signMat = new THREE.MeshLambertMaterial({ color: p.water, flatShading: true });
+    const dirtMat = new THREE.MeshStandardMaterial({ color: p.soil, flatShading: true });
+    const grassMat = new THREE.MeshStandardMaterial({ color: p.hedge, flatShading: true });
+    const poleMat = new THREE.MeshStandardMaterial({ color: p.metal, flatShading: true });
+    const lampMat = new THREE.MeshStandardMaterial({ color: p.activeLight, emissive: p.activeLight, emissiveIntensity: 1, flatShading: true });
+    const woodMat = new THREE.MeshStandardMaterial({ color: p.soil, flatShading: true });
+    const shrubMat = new THREE.MeshStandardMaterial({ color: p.hedgeShadow, flatShading: true });
+    const flowerMat = new THREE.MeshStandardMaterial({ color: 0xE91E63, flatShading: true });
+    const signMat = new THREE.MeshStandardMaterial({ color: p.water, flatShading: true });
 
     layout.decor.forEach(decor => {
       const worldX = decor.grid.x * CELL_SIZE + (decor.offset?.x || 0) * 0.02;
@@ -33,15 +47,18 @@ export class DecorBuilder {
 
       switch (decor.kind) {
         case "tree": {
-          const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 1), dirtMat);
+          const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1, 0.2), dirtMat);
           trunk.position.y = 0.5;
           trunk.castShadow = true;
           mesh.add(trunk);
 
-          const canopy = new THREE.Mesh(new THREE.SphereGeometry(0.6, 8, 8), grassMat);
-          canopy.position.y = 1.25;
-          canopy.castShadow = true;
-          mesh.add(canopy);
+          const canopy1 = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), grassMat);
+          canopy1.position.y = 1.3;
+          canopy1.castShadow = true;
+          const canopy2 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), grassMat);
+          canopy2.position.set(0.3, 1.7, -0.3);
+          canopy2.castShadow = true;
+          mesh.add(canopy1, canopy2);
           break;
         }
         case "lamp": {
@@ -74,7 +91,7 @@ export class DecorBuilder {
           break;
         }
         case "shrub": {
-          const shrub = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), shrubMat);
+          const shrub = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), shrubMat);
           shrub.position.y = 0.3;
           shrub.castShadow = true;
           mesh.add(shrub);
@@ -105,52 +122,143 @@ export class DecorBuilder {
       group.add(mesh);
     });
 
-    // --- SIBLING SHIPYARD MONUMENT ---
+    // --- SIBLING SHIPYARD MONUMENT (Coal Drops Yard style) ---
     const monumentGroup = new THREE.Group();
+    const brickMat = new THREE.MeshStandardMaterial({ color: 0x9b3f2f, flatShading: true }); // Richer, redder Victorian brick
+    const roofMat = new THREE.MeshStandardMaterial({ color: 0x222222, flatShading: true }); // Dark slate roof
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x88ccff, transparent: true, opacity: 0.6, flatShading: true });
     
-    // Create text
-    const textMat = new THREE.MeshLambertMaterial({ color: p.nexus, flatShading: true });
-    const line1 = createVoxelText("SIBLING", textMat, { letterSpacing: 1 });
-    const line2 = createVoxelText("SHIPYARD", textMat, { letterSpacing: 1 });
+    // Create the kissing viaducts cross-section
+    const shape = new THREE.Shape();
+    shape.moveTo(-5, 0); // Left outer base
+    shape.lineTo(-2, 0); // Left inner base (the river will flow right between -2 and 2!)
+    shape.quadraticCurveTo(-1.5, 3.5, 0, 4.0); // Swoop up to center kiss
+    shape.quadraticCurveTo(1.5, 3.5, 2, 0); // Swoop down to right inner base
+    shape.lineTo(5, 0); // Right outer base
+    shape.lineTo(5, 2.5); // Right outer wall
+    shape.quadraticCurveTo(1.5, 4.0, 0, 4.5); // Right roof swoop up
+    shape.quadraticCurveTo(-1.5, 4.0, -5, 2.5); // Left roof swoop down
+    shape.lineTo(-5, 0); // Back to start
     
-    // Position lines relative to each default voxel size
-    // Voxel height is 5
-    line1.position.set(0, 7, 0);
-    line2.position.set(0, 0, 0);
-    
-    // Center the text group
-    const line1Width = 7 * 5; // approx 7 chars * (4 + 1 spacing)
-    const line2Width = 8 * 5; // approx 8 chars * 5
-    line1.position.x = -line1Width / 2;
-    line2.position.x = -line2Width / 2;
+    const extrudeSettings = {
+      steps: 1,
+      depth: 16, // Longer to span more of the river
+      bevelEnabled: true,
+      bevelThickness: 0.1,
+      bevelSize: 0.1,
+      bevelSegments: 2
+    };
 
-    monumentGroup.add(line1, line2);
+    const viaductGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    // Center the extrusion on Z
+    viaductGeo.translate(0, 0, -8);
+    const viaduct = new THREE.Mesh(viaductGeo, brickMat);
+    viaduct.castShadow = true;
+    viaduct.receiveShadow = true;
+    monumentGroup.add(viaduct);
 
-    // Scale down to fit the plaza (increased to make it massive)
-    monumentGroup.scale.set(0.4, 0.4, 0.4);
+    // Add large glass facades closing off the front and back of the swoops
+    const glassShape = new THREE.Shape();
+    glassShape.moveTo(-1.9, 0);
+    glassShape.quadraticCurveTo(-1.5, 3.4, 0, 3.9);
+    glassShape.quadraticCurveTo(1.5, 3.4, 1.9, 0);
+    glassShape.lineTo(-1.9, 0);
 
-    // Give it a sleek base
-    const baseGeo = new THREE.BoxGeometry(7, 0.5, 2.5);
-    const baseMat = new THREE.MeshLambertMaterial({ color: p.metal, flatShading: true });
-    const baseMesh = new THREE.Mesh(baseGeo, baseMat);
-    baseMesh.position.y = 0.25;
-    baseMesh.castShadow = true;
-    monumentGroup.add(baseMesh);
+    const glassExtrudeSettings = { steps: 1, depth: 0.2, bevelEnabled: false };
+    const glassFront = new THREE.Mesh(new THREE.ExtrudeGeometry(glassShape, glassExtrudeSettings), glassMat);
+    glassFront.position.z = 7.9;
+    const glassBack = new THREE.Mesh(new THREE.ExtrudeGeometry(glassShape, glassExtrudeSettings), glassMat);
+    glassBack.position.z = -8.1;
+    monumentGroup.add(glassFront, glassBack);
 
-    // Ensure text casts shadows
-    monumentGroup.traverse(child => {
-      if (child instanceof THREE.Mesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
+    // Add some archways along the brick viaducts for that classic look
+    for (let z = -6; z <= 6; z += 3) {
+      for (let side of [-1, 1]) {
+        // Cutout arches along the outer walls
+        const arch = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.5, 16), glassMat);
+        arch.rotation.x = Math.PI / 2;
+        arch.rotation.z = Math.PI / 2;
+        arch.position.set(side * 5.0, 1.2, z);
+        monumentGroup.add(arch);
       }
+    }
+
+    // Add the "SIBLING SHIPYARD" sign PAINTED on the roof (1800s old-school style)
+    const whitePaintMat = new THREE.MeshStandardMaterial({ 
+      color: 0xffffff, 
+      roughness: 0.9, 
+      flatShading: true,
+      transparent: true,
+      opacity: 0.9, // Slightly faded
+      side: THREE.DoubleSide
+    });
+    
+    loadFont((font) => {
+      const createDecal = (text: string, mat: THREE.Material) => {
+        const geo = new TextGeometry(text, {
+          font, size: 1.2, depth: 0.02, curveSegments: 2,
+          bevelEnabled: false
+        });
+        geo.computeBoundingBox();
+        const mesh = new THREE.Mesh(geo, mat);
+        return { mesh, width: (geo.boundingBox!.max.x - geo.boundingBox!.min.x) };
+      };
+      
+      const text = "SIBLING  SHIPYARD"; // Double space between words
+      const tracking = 0.3; // Extra space between letters
+      const wordGroup = new THREE.Group();
+      
+      let cursorX = 0;
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (char === ' ') {
+          cursorX += 0.6; // Width of a space
+          continue;
+        }
+        
+        const { mesh, width } = createDecal(char, whitePaintMat);
+        
+        // Keep scaleX relatively high so it remains BOLD, make scaleY high for height
+        const scaleX = 0.7; 
+        const scaleY = 1.3;
+        mesh.scale.set(scaleX, scaleY, 1.0);
+        mesh.position.set(cursorX, 0, 0);
+        
+        wordGroup.add(mesh);
+        cursorX += (width * scaleX) + tracking;
+      }
+      
+      // Center the built word group on its X axis
+      wordGroup.position.x = -cursorX / 2;
+      
+      // Wrap it in a layout group to lay it flat and align it to the Z axis
+      const layoutGroup = new THREE.Group();
+      layoutGroup.add(wordGroup);
+      layoutGroup.rotation.x = -Math.PI / 2;
+      layoutGroup.rotation.z = Math.PI / 2;
+
+      
+      const textGroup = new THREE.Group();
+      // Place it perfectly centered on the RIGHT roof. 
+      // Right roof goes from X=0 to X=5. Center is X=2.5.
+      // At X=2.5, curve Y is ~3.54. Using Y=3.7 to float safely above it.
+      textGroup.position.set(2.5, 3.7, 0);
+      textGroup.rotation.z = -0.41; // Accurate slope tangent at X=2.5
+      
+      textGroup.add(layoutGroup);
+      monumentGroup.add(textGroup);
     });
 
-    // Position monument in the center of the 5x5 plaza (9, 8)
-    const plazaCenterX = 9 * CELL_SIZE;
-    const plazaCenterZ = 8 * CELL_SIZE;
+    // Make the building bigger (Scale 0.9 instead of 0.6)
+    monumentGroup.scale.set(0.9, 0.9, 0.9);
+
+    // Position monument directly OVER the river (River is exactly at X=2).
+    // The river stretches from Y=0 to 23 along the Z axis visually.
+    const plazaCenterX = 2.5 * CELL_SIZE; // Adjust slightly if the river cell is centered at 2 or 2.5
+    // Wait, river is at x=2. Its cell covers 2.0 to 3.0. Center of the river is 2.5.
+    const plazaCenterZ = 6 * CELL_SIZE;
     monumentGroup.position.set(plazaCenterX, 0, plazaCenterZ);
-    // Rotate to face the camera (isometric camera looks from bottom right)
-    monumentGroup.rotation.y = Math.PI / 4;
+    
     group.add(monumentGroup);
 
     const width = layout.width * CELL_SIZE;

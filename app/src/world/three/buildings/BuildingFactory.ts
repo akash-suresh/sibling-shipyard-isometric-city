@@ -2,38 +2,67 @@ import * as THREE from 'three';
 import type { ProjectDefinition } from '../../../data/types';
 import type { TownLayout } from '../../layout/townLayout';
 import { CELL_SIZE } from '../TerrainBuilder';
-import { buildWorkshop, type BuildingResult } from './WorkshopBuilder';
+import { buildWorkshop, type BuildingResult as WorkshopResult } from './WorkshopBuilder';
 import { buildStudio } from './StudioBuilder';
-import { buildTower } from './TowerBuilder';
+import { buildTower, type BuildingResult } from './TowerBuilder';
 import type { Updatable } from '../SceneManager';
 import { applyStatusEffects } from '../effects/StatusEffects';
 import { applyStageEffects } from '../effects/StageEffects';
 import { createBuildingSign } from './BuildingSign';
 
 export class BuildingFactory {
-  createBuildings(projects: ProjectDefinition[], layout: TownLayout): { group: THREE.Group, updatables: Updatable[] } {
+  private cache = new Map<string, { group: THREE.Group, updatables: Updatable[], result: BuildingResult, archetype: string }>();
+
+  createBuildings(projects: ProjectDefinition[], layout: TownLayout): { group: THREE.Group, updatables: Updatable[], newUpdatables: Updatable[], removedUpdatables: Updatable[] } {
     const group = new THREE.Group();
     const updatables: Updatable[] = [];
+    const newUpdatables: Updatable[] = [];
+    const removedUpdatables: Updatable[] = [];
+
+    const currentIds = new Set<string>();
 
     projects.forEach(project => {
-      let result: BuildingResult;
+      currentIds.add(project.id);
+      const cached = this.cache.get(project.id);
 
+      // If it exists and hasn't changed archetype, update it!
+      if (cached && cached.archetype === project.building.archetype) {
+        // Update its position
+        cached.group.position.set(project.grid.x * CELL_SIZE, 0, project.grid.y * CELL_SIZE);
+        
+        // Update its internal stage if it supports it
+        if (cached.result.updatable && (cached.result.updatable as any).setStage) {
+          (cached.result.updatable as any).setStage(project.stage);
+        }
+        
+        group.add(cached.group);
+        updatables.push(...cached.updatables);
+        return;
+      }
+
+      // Otherwise, build it from scratch
+      if (cached) {
+        removedUpdatables.push(...cached.updatables);
+      }
+
+      let result: any;
       const config = {
         name: project.name,
         accent: project.building.accent,
         status: project.status,
-        stage: project.stage
+        stage: project.stage,
+        logo: project.logo // Pass logo for builders to use!
       };
 
       if (project.building.archetype === 'workshop') {
         result = buildWorkshop(config);
-        result.group.scale.set(0.6, 0.6, 0.6); // Sprawling, but fills plot
+        result.group.scale.set(0.6, 0.6, 0.6); 
       } else if (project.building.archetype === 'studio') {
         result = buildStudio(config);
-        result.group.scale.set(0.75, 0.75, 0.75); // Medium office
+        result.group.scale.set(0.75, 0.75, 0.75);
       } else if (project.building.archetype === 'tower') {
         result = buildTower(config);
-        result.group.scale.set(1.0, 1.0, 1.0); // Tall imposing tower
+        result.group.scale.set(1.4, 1.4, 1.4); // Made tower 40% bigger!
       } else {
         return;
       }
@@ -41,85 +70,60 @@ export class BuildingFactory {
       result.group.position.set(project.grid.x * CELL_SIZE, 0, project.grid.y * CELL_SIZE);
       result.group.userData = { projectId: project.id, projectName: project.name };
       
-      // Add Roof Sign (Iteration 12)
-      const roofSign = createBuildingSign(project);
-      roofSign.scale.set(0.1, 0.1, 0.1);
+      const roofSign = createBuildingSign(project, false);
+      roofSign.scale.set(0.18, 0.18, 0.18); // Much bigger roof logo!
       roofSign.rotation.y = Math.PI / 4;
       
-      // Add Ground Sign (Iteration 13)
-      const groundSign = roofSign.clone();
-      groundSign.scale.set(0.08, 0.08, 0.08); // slightly smaller for ground
-      groundSign.position.set(1.5, 0.2, 2.5);
+      const groundSign = createBuildingSign(project, true); // Force text on grass
+      groundSign.scale.set(0.08, 0.08, 0.08); 
       
-      // Archetype specific sign placement
       if (project.building.archetype === 'workshop') {
         roofSign.position.set(0, 4.5, 0);
-        groundSign.position.set(2, 0.5, 2);
+        groundSign.position.set(2, 0.6, 3.5);
+        result.group.add(roofSign);
       } else if (project.building.archetype === 'studio') {
-        roofSign.position.set(0, 5, 0);
-        groundSign.position.set(2, 0.2, 3.5);
+        // Skip adding the billboard if a logo is provided; the Studio paints it on its terrace!
+        if (!project.logo) {
+          roofSign.position.set(0, 6.0, 0);
+          result.group.add(roofSign);
+        }
+        // Move ground sign ahead of the footpath, onto the grass
+        groundSign.position.set(4.0, 0.6, 7.0);
       } else if (project.building.archetype === 'tower') {
-        roofSign.position.set(0, 8, 0);
-        groundSign.position.set(1.5, 0.2, 1.5);
+        roofSign.position.set(0, 9.5, 0);
+        // Move ground sign further to the front (+Z and +X) into the grass
+        groundSign.position.set(4.5, 0.6, 4.5); 
+        result.group.add(roofSign);
       }
       
-      result.group.add(roofSign);
       result.group.add(groundSign);
 
-      group.add(result.group);
-
+      const buildingUpdatables: Updatable[] = [];
       const statusUpdatables = applyStatusEffects(result.group, project.status);
-      updatables.push(...statusUpdatables);
+      buildingUpdatables.push(...statusUpdatables);
 
       const stageUpdatables = applyStageEffects(result.group, project.stage);
-      updatables.push(...stageUpdatables);
+      buildingUpdatables.push(...stageUpdatables);
       if (result.updatable) {
-        updatables.push(result.updatable);
+        buildingUpdatables.push(result.updatable);
       }
 
-      // Add Growth Animation
-      let targetScaleX = 1;
-      let targetScaleY = 1;
-      let targetScaleZ = 1;
-      
-      if (project.building.archetype === 'workshop') {
-        targetScaleX = targetScaleY = targetScaleZ = 1.5; 
-      } else if (project.building.archetype === 'studio') {
-        targetScaleX = targetScaleY = targetScaleZ = 1.4; 
-      } else if (project.building.archetype === 'tower') {
-        targetScaleX = targetScaleY = targetScaleZ = 1.8; 
-      }
-
-      result.group.scale.set(0, 0, 0); // Start tiny
-
-      updatables.push({
-        update(delta: number, time: number) {
-          if (time > 1.5) {
-            result.group.scale.set(targetScaleX, targetScaleY, targetScaleZ);
-            return;
-          }
-          // Elastic ease out
-          const t = time / 1.5;
-          const p = 0.3;
-          let ease = 1;
-          if (t === 0) ease = 0;
-          else if (t < 1) {
-            ease = Math.pow(2, -10 * t) * Math.sin((t - p / 4) * (2 * Math.PI) / p) + 1;
-          }
-          
-          result.group.scale.set(
-            targetScaleX * ease,
-            targetScaleY * ease,
-            targetScaleZ * ease
-          );
-        }
+      this.cache.set(project.id, {
+        group: result.group,
+        updatables: buildingUpdatables,
+        result: result,
+        archetype: project.building.archetype
       });
+
+      group.add(result.group);
+      updatables.push(...buildingUpdatables);
+      newUpdatables.push(...buildingUpdatables);
     });
 
     const width = layout.width * CELL_SIZE;
     const depth = layout.height * CELL_SIZE;
     group.position.set(-width / 2 + CELL_SIZE / 2, 0, -depth / 2 + CELL_SIZE / 2);
 
-    return { group, updatables };
+    return { group, updatables, newUpdatables, removedUpdatables };
   }
 }

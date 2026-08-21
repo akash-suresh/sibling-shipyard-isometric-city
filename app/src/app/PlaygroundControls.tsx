@@ -1,93 +1,156 @@
 import { useState } from "react";
-import { PlaygroundCanvas } from "../world/PlaygroundCanvas";
 import {
   buildingArchetypes,
   projectStages,
   projectStatuses,
 } from "../data/types";
 import type {
+  ProjectDefinition,
   BuildingArchetype,
   ProjectStage,
   ProjectStatus,
 } from "../data/types";
 
-export function PlaygroundControls() {
-  const [archetype, setArchetype] = useState<BuildingArchetype>("workshop");
-  const [stage, setStage] = useState<ProjectStage>("idea");
-  const [status, setStatus] = useState<ProjectStatus>("building");
-  const [accent, setAccent] = useState<string>("#6c7bd9");
+interface PlaygroundControlsProps {
+  projects: ProjectDefinition[];
+  setProjects: (projects: ProjectDefinition[]) => void;
+}
 
-  const handleArchetypeChange = (newArchetype: BuildingArchetype) => {
-    setArchetype(newArchetype);
+export function PlaygroundControls({ projects, setProjects }: PlaygroundControlsProps) {
+  const [selectedId, setSelectedId] = useState<string>(projects[0]?.id || "");
+
+  const selected = projects.find((p) => p.id === selectedId);
+
+  const updateProject = (id: string, updates: Partial<ProjectDefinition>) => {
+    setProjects(
+      projects.map((p) => {
+        if (p.id === id) {
+          return {
+            ...p,
+            ...updates,
+            building: { ...p.building, ...(updates.building || {}) },
+            grid: { ...p.grid, ...(updates.grid || {}) },
+          };
+        }
+        return p;
+      })
+    );
+  };
+
+  const updateSelected = (updates: Partial<ProjectDefinition>) => {
+    if (selected) {
+      updateProject(selected.id, updates);
+    }
   };
 
   return (
-    <div className="playground-view">
-      <PlaygroundCanvas
-        archetype={archetype}
-        stage={stage}
-        status={status}
-        accent={accent}
-      />
+    <aside className="playground-controls" style={{ zIndex: 10, background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(10px)', padding: '1rem', borderLeft: '1px solid #ccc', position: 'absolute', right: 0, top: 0, bottom: 0, width: '320px', overflowY: 'auto' }}>
+      <h2>City Editor</h2>
 
-      <aside className="playground-controls">
-        <h2>Building Playground</h2>
+      <div className="control-group">
+        <h3>Select Project</h3>
+        <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)} style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>{p.name} ({p.id})</option>
+          ))}
+        </select>
+      </div>
 
-        <div className="control-group">
-          <h3>Archetype</h3>
-          <div className="segmented-control">
-            {buildingArchetypes.map((arch) => (
-              <button
-                key={arch}
-                onClick={() => handleArchetypeChange(arch)}
-                aria-pressed={archetype === arch}
-              >
-                {arch}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="control-group">
-          <h3>Lifecycle Stage</h3>
-          <select
-            value={stage}
-            onChange={(e) => setStage(e.target.value as ProjectStage)}
-          >
-            {projectStages.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="control-group">
-          <h3>Status</h3>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value as ProjectStatus)}
-          >
-            {projectStatuses.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="control-group">
-          <h3>Accent Color</h3>
-          <div className="color-picker-wrap">
-            <input
-              type="color"
-              value={accent}
-              onChange={(e) => setAccent(e.target.value)}
+      {selected && (
+        <>
+          <div className="control-group">
+            <h3>Name</h3>
+            <input 
+              type="text" 
+              value={selected.name} 
+              onChange={(e) => updateSelected({ name: e.target.value })}
+              style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
             />
-            <code>{accent}</code>
           </div>
-        </div>
-      </aside>
-    </div>
+
+          <div className="control-group">
+            <h3>Grid Position (X, Y)</h3>
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+              <input 
+                type="number" 
+                value={selected.grid.x} 
+                onChange={(e) => updateSelected({ grid: { ...selected.grid, x: parseInt(e.target.value) || 0 } })}
+                style={{ width: '50%', padding: '0.5rem' }}
+              />
+              <input 
+                type="number" 
+                value={selected.grid.y} 
+                onChange={(e) => updateSelected({ grid: { ...selected.grid, y: parseInt(e.target.value) || 0 } })}
+                style={{ width: '50%', padding: '0.5rem' }}
+              />
+            </div>
+          </div>
+
+          <div className="control-group">
+            <h3>Archetype</h3>
+            <div className="segmented-control" style={{ marginBottom: '1rem' }}>
+              {buildingArchetypes.map((arch) => (
+                <button
+                  key={arch}
+                  onClick={() => updateSelected({ building: { ...selected.building, archetype: arch as BuildingArchetype } })}
+                  aria-pressed={selected.building.archetype === arch}
+                  style={{ display: 'block', width: '100%', padding: '0.5rem', marginBottom: '0.2rem' }}
+                >
+                  {arch}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="control-group">
+            <h3>Lifecycle Stage</h3>
+            <select
+              value={selected.stage}
+              onChange={(e) => updateSelected({ stage: e.target.value as ProjectStage })}
+              style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
+            >
+              {projectStages.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="control-group">
+            <h3>Status</h3>
+            <select
+              value={selected.status}
+              onChange={(e) => updateSelected({ status: e.target.value as ProjectStatus })}
+              style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
+            >
+              {projectStatuses.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="control-group">
+            <h3>Accent Color</h3>
+            <div className="color-picker-wrap" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <input
+                type="color"
+                value={selected.building.accent}
+                onChange={(e) => updateSelected({ building: { ...selected.building, accent: e.target.value } })}
+              />
+              <code>{selected.building.accent}</code>
+            </div>
+          </div>
+          
+          <button 
+            style={{ marginTop: '2rem', width: '100%', padding: '0.5rem', background: '#333', color: 'white', borderRadius: '4px' }}
+            onClick={() => {
+              console.log(JSON.stringify(projects, null, 2));
+              alert("Projects JSON logged to console!");
+            }}
+          >
+            Export JSON to Console
+          </button>
+        </>
+      )}
+    </aside>
   );
 }

@@ -19,6 +19,7 @@ export interface ProjectDefinition {
   }
   latestMilestone?: string
   nextMilestone?: string
+  logo?: string
 }
 
 export interface MilestoneDefinition {

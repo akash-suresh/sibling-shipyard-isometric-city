@@ -5,14 +5,14 @@ import type { Updatable } from '../SceneManager';
 const p = visualTokens.palette;
 
 // Shared Materials
-const concreteMat = new THREE.MeshLambertMaterial({ color: p.concrete, flatShading: true });
-const darkConcreteMat = new THREE.MeshLambertMaterial({ color: p.concreteShadow, flatShading: true });
-const steelMat = new THREE.MeshLambertMaterial({ color: p.metal, flatShading: true });
-const constructionYellowMat = new THREE.MeshLambertMaterial({ color: p.crane, flatShading: true });
-const scaffoldOrangeMat = new THREE.MeshLambertMaterial({ color: p.craneShadow, flatShading: true });
-const windowMat = new THREE.MeshLambertMaterial({ color: p.glass, emissive: 0x332510, emissiveIntensity: 0.8, flatShading: true });
-const workerMat = new THREE.MeshLambertMaterial({ color: 0xCDDC39, flatShading: true }); // hi-vis green/yellow
-const hatMat = new THREE.MeshLambertMaterial({ color: 0xFFC107, flatShading: true });
+const concreteMat = new THREE.MeshStandardMaterial({ color: p.concrete, flatShading: true });
+const darkConcreteMat = new THREE.MeshStandardMaterial({ color: p.concreteShadow, flatShading: true });
+const steelMat = new THREE.MeshStandardMaterial({ color: p.metal, flatShading: true });
+const constructionYellowMat = new THREE.MeshStandardMaterial({ color: p.crane, flatShading: true });
+const scaffoldOrangeMat = new THREE.MeshStandardMaterial({ color: p.craneShadow, flatShading: true });
+const windowMat = new THREE.MeshStandardMaterial({ color: p.glass, emissive: 0x332510, emissiveIntensity: 0.8, flatShading: true });
+const workerMat = new THREE.MeshStandardMaterial({ color: 0xCDDC39, flatShading: true }); // hi-vis green/yellow
+const hatMat = new THREE.MeshStandardMaterial({ color: 0xFFC107, flatShading: true });
 
 export function createWorker(x: number, z: number, rot: number) {
   const worker = new THREE.Group();
@@ -22,7 +22,7 @@ export function createWorker(x: number, z: number, rot: number) {
   body.castShadow = true;
   worker.add(body);
   
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.04), new THREE.MeshLambertMaterial({color: 0xFFCC80, flatShading: true}));
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.04), new THREE.MeshStandardMaterial({color: 0xFFCC80, flatShading: true}));
   head.position.y = 0.19;
   head.castShadow = true;
   worker.add(head);
@@ -148,7 +148,7 @@ export function createTowerCrane(towerHeight: number = 4.0): { group: THREE.Grou
   craneHead.add(payload);
 
   // Warning light
-  const warnLightMat = new THREE.MeshLambertMaterial({ color: 0xff3300, emissive: 0xff3300, emissiveIntensity: 1, flatShading: true });
+  const warnLightMat = new THREE.MeshStandardMaterial({ color: 0xff3300, emissive: 0xff3300, emissiveIntensity: 1, flatShading: true });
   const warnLight = new THREE.Mesh(new THREE.SphereGeometry(0.06), warnLightMat);
   warnLight.position.set(0, 1.05, 0);
   craneHead.add(warnLight);
@@ -199,7 +199,7 @@ export function createFoundationPit(width: number, depth: number) {
   
   // 1. Dug out dirt pit (sunken plane)
   const dirtGeo = new THREE.PlaneGeometry(width, depth);
-  const dirtMat = new THREE.MeshLambertMaterial({ color: 0x4a3b2c, flatShading: true }); // dark soil
+  const dirtMat = new THREE.MeshStandardMaterial({ color: 0x4a3b2c, flatShading: true }); // dark soil
   const dirt = new THREE.Mesh(dirtGeo, dirtMat);
   dirt.rotation.x = -Math.PI / 2;
   dirt.position.y = 0.01;
@@ -216,7 +216,7 @@ export function createFoundationPit(width: number, depth: number) {
   pitGroup.add(pad);
   
   // 3. Wooden forms around the concrete pad
-  const formMat = new THREE.MeshLambertMaterial({ color: p.soil, flatShading: true }); // wood
+  const formMat = new THREE.MeshStandardMaterial({ color: p.soil, flatShading: true }); // wood
   const fThickness = 0.05;
   const fHeight = 0.1;
   

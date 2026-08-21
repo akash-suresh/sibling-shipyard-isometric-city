@@ -3,6 +3,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js';
 import { IsometricCamera } from './IsometricCamera';
 import { visualTokens } from '../../design/visualTokens';
 
@@ -17,6 +18,7 @@ export class SceneManager {
   composer: EffectComposer;
   worldGroup: THREE.Group;
   clock: THREE.Timer;
+  ssaoPass: SSAOPass;
   
   cameraControls: IsometricCamera;
   private updatables: Set<Updatable> = new Set();
@@ -36,14 +38,14 @@ export class SceneManager {
     this.scene.background = new THREE.Color(visualTokens.palette.canvas);
 
     const aspect = container.clientWidth / container.clientHeight;
-    const frustumSize = 17.5;
+    const frustumSize = 25;
     this.camera = new THREE.OrthographicCamera(
       -frustumSize * aspect,
       frustumSize * aspect,
       frustumSize,
       -frustumSize,
-      1,
-      1000
+      -50,
+      150
     );
 
     this.camera.position.set(20, 20, 20);
@@ -53,7 +55,7 @@ export class SceneManager {
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.BasicShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     container.appendChild(this.renderer.domElement);
 
@@ -67,16 +69,22 @@ export class SceneManager {
     // Optimize shadow map
     this.dirLight.shadow.mapSize.width = 2048;
     this.dirLight.shadow.mapSize.height = 2048;
-    this.dirLight.shadow.camera.left = -30;
-    this.dirLight.shadow.camera.right = 30;
-    this.dirLight.shadow.camera.top = 30;
-    this.dirLight.shadow.camera.bottom = -30;
+    this.dirLight.shadow.camera.left = -50;
+    this.dirLight.shadow.camera.right = 50;
+    this.dirLight.shadow.camera.top = 50;
+    this.dirLight.shadow.camera.bottom = -50;
     this.dirLight.shadow.bias = -0.0005;
     this.scene.add(this.dirLight);
 
     this.composer = new EffectComposer(this.renderer);
     const renderPass = new RenderPass(this.scene, this.camera);
     this.composer.addPass(renderPass);
+
+    this.ssaoPass = new SSAOPass(this.scene, this.camera, container.clientWidth, container.clientHeight);
+    this.ssaoPass.kernelRadius = 16;
+    this.ssaoPass.minDistance = 0.005;
+    this.ssaoPass.maxDistance = 0.05;
+    this.composer.addPass(this.ssaoPass);
 
     const bloomPass = new UnrealBloomPass(
       new THREE.Vector2(container.clientWidth, container.clientHeight),
@@ -116,6 +124,7 @@ export class SceneManager {
 
     this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
     this.composer.setSize(this.container.clientWidth, this.container.clientHeight);
+    if (this.ssaoPass) this.ssaoPass.setSize(this.container.clientWidth, this.container.clientHeight);
   }
 
   registerUpdatable(updatable: Updatable): void {
@@ -149,12 +158,18 @@ export class SceneManager {
     const nightDirColor = new THREE.Color(0x1e3a8a).multiplyScalar(0.1); // Moonlight
     this.dirLight.color.lerpColors(dayDirColor, nightDirColor, this.dayNightTransition);
 
+    const dayBgColor = new THREE.Color(visualTokens.palette.canvas);
+    const nightBgColor = new THREE.Color(0x0a1128); // Deep night sky
+    if (this.scene.background instanceof THREE.Color) {
+      this.scene.background.lerpColors(dayBgColor, nightBgColor, this.dayNightTransition);
+    }
+
     // Tween streetlights and windows
     this.scene.traverse((child) => {
       if (child instanceof THREE.PointLight && child.userData.isStreetlight) {
         child.intensity = this.dayNightTransition * 2.0; // max intensity 2.0
       } else if (child instanceof THREE.Mesh) {
-        const mat = child.material as THREE.MeshLambertMaterial | THREE.MeshStandardMaterial;
+        const mat = child.material as THREE.MeshStandardMaterial | THREE.MeshStandardMaterial;
         if (mat && mat.emissive && child.userData.isWindow) {
           mat.emissiveIntensity = THREE.MathUtils.lerp(0.8, 3.0, this.dayNightTransition); // Glow harder at night
         }

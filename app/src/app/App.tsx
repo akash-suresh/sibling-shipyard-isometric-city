@@ -8,27 +8,28 @@ import {
 } from "../world/events/milestoneState";
 import { ThreeShipyardCanvas } from "../world/ThreeShipyardCanvas";
 import { PlaygroundControls } from "./PlaygroundControls";
-import type { MilestoneDefinition } from "../data/types";
+import type { MilestoneDefinition, ProjectDefinition } from "../data/types";
 
 const publicBeta = milestoneData[0] as MilestoneDefinition;
 
 export function App() {
-  const [view, setView] = useState<
-    "world" | "target" | "playground"
-  >("world");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [projectsState, setProjectsState] = useState<ProjectDefinition[]>(projects);
   const [milestone, setMilestone] = useState<MilestoneState>({
     status: "ready",
     playCount: 0,
   });
   const [isNightMode, setIsNightMode] = useState(false);
   
+  // Secret developer mode via ?playground in the URL
+  const isPlayground = new URLSearchParams(window.location.search).has('playground');
+  
   const selectProject = useCallback((id: string) => setSelectedId(id), []);
   const finishMilestone = useCallback(
     () => setMilestone(completeMilestone),
     [],
   );
-  const selected = projects.find((project) => project.id === selectedId);
+  const selected = projectsState.find((project) => project.id === selectedId);
 
   const playPublicBeta = () => {
     setSelectedId(publicBeta.projectId);
@@ -38,69 +39,41 @@ export function App() {
   return (
     <main>
       <header className="masthead">
-        <p>AKASH × SKANDA</p>
         <h1>Sibling Shipyard</h1>
         <span>Things we're building.</span>
       </header>
 
       <button 
+        className="night-toggle"
         onClick={() => setIsNightMode(!isNightMode)}
-        style={{ position: 'absolute', right: '40px', bottom: '40px', zIndex: 10, padding: '12px 24px', borderRadius: '12px', background: isNightMode ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.8)', color: isNightMode ? '#fff' : '#333', border: '1px solid rgba(128,128,128,0.2)', cursor: 'pointer', fontWeight: 600, backdropFilter: 'blur(12px)' }}
+        aria-pressed={isNightMode}
       >
         {isNightMode ? '☀️ Day' : '🌙 Night'}
       </button>
 
-      <div className="view-switch" role="group" aria-label="Shipyard view">
-        <button
-          onClick={() => setView("world")}
-          aria-pressed={view === "world"}
-        >
-          World
-        </button>
-        <button
-          onClick={() => setView("playground")}
-          aria-pressed={view === "playground"}
-        >
-          Playground
-        </button>
-        <button
-          onClick={() => setView("target")}
-          aria-pressed={view === "target"}
-        >
-          Beauty target
-        </button>
+      <div className="hint" style={{position: 'fixed', bottom: 16, right: 16, fontSize: '0.8rem', color: '#666', pointerEvents: 'none', zIndex: 10}}>
+        Drag to explore · Scroll to zoom · Select a project
       </div>
 
-      {view === "world" ? (
-        <ThreeShipyardCanvas projects={projects} isNightMode={isNightMode} />
-      ) : view === "playground" ? (
-        <PlaygroundControls />
-      ) : (
-        <figure className="beauty-target">
-          <img
-            src="/assets/style-guide/shipyard-zero-beauty-target-v1.png"
-            alt="Near-final visual target for Shipyard Zero, showing Orion under construction, Spark live, and Nexus growing on a compact isometric island"
-          />
-          <figcaption>Shipyard Zero · beauty target v1</figcaption>
-        </figure>
+      <ThreeShipyardCanvas projects={projectsState} isNightMode={isNightMode} />
+      {isPlayground && (
+        <PlaygroundControls projects={projectsState} setProjects={setProjectsState} />
       )}
 
-      {view === "world" && (
-        <nav className="project-nav" aria-label="Explore projects">
-          {projects.map((project) => (
-            <button
-              key={project.id}
-              onClick={() => selectProject(project.id)}
-              aria-pressed={selectedId === project.id}
-            >
-              <span>{project.name}</span>
-              <small>{project.status}</small>
-            </button>
-          ))}
-        </nav>
-      )}
+      <nav className="project-nav" aria-label="Explore projects">
+        {projectsState.map((project) => (
+          <button
+            key={project.id}
+            onClick={() => selectProject(project.id)}
+            aria-pressed={selectedId === project.id}
+          >
+            <span>{project.name}</span>
+            <small>{project.status}</small>
+          </button>
+        ))}
+      </nav>
 
-      {view === "world" && selected && (
+      {selected && (
         <aside className="project-card" aria-live="polite">
           <button
             className="close"
@@ -146,14 +119,6 @@ export function App() {
           )}
         </aside>
       )}
-
-      <p className="hint">
-        {view === "world"
-          ? "Drag to explore · Scroll to zoom · Select a project"
-          : view === "target"
-            ? "Visual target · not the interactive renderer yet"
-            : "Playground"}
-      </p>
     </main>
   );
 }

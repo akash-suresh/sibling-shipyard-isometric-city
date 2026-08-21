@@ -55,10 +55,10 @@ export const shipyardZeroLayout: TownLayout = {
     point(15, 5), point(16, 5),
   ],
   paths: [
-    // Path to Orion
-    point(4, 13), point(4, 14), point(4, 15),
-    // Path to Spark
-    point(20, 13), point(20, 14), point(20, 15),
+    // Path to 1% (Orion)
+    point(4, 13), point(4, 14), point(4, 15), point(4, 16), point(4, 17), point(4, 18), point(4, 19), point(5, 19), point(6, 19),
+    // Path to 3 of Spades
+    point(13, 19), point(14, 19), point(15, 19), point(16, 19), point(17, 19), point(18, 19), point(19, 19), point(20, 19),
     // Path connecting Nexus to road
     point(14, 7), point(14, 8), point(14, 9), point(14, 10), point(14, 11),
     point(13, 11) // connect to x=12 road
