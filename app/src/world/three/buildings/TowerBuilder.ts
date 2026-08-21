@@ -84,7 +84,7 @@ export function buildTower(config: {
   // rotatingElements.push(crane); // We don't need this, we'll use craneData.updatable
 
 
-  const truck = createDumpTruck(accentColor);
+  const truck = createDumpTruck();
   truck.position.set(2, 0, 2);
   tagReveal(truck, 0.05, 0.4);
   constructionGroup.add(truck);
@@ -278,7 +278,7 @@ export function buildTower(config: {
 
       animatableProps.forEach(el => {
         // Bobbing up and down
-        el.position.y = 1 + Math.sin(time * 2) * 0.1;
+        el.position.y = 1 + Math.sin((time || 0) * 2) * 0.1;
       });
     }
   };
