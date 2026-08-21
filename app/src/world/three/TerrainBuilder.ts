@@ -103,7 +103,7 @@ export class TerrainBuilder {
     });
 
     // --- DIORAMA CRUST FOUNDATION ---
-    const crustDepth = 12;
+    const crustDepth = 4;
     const crustGeo = new THREE.BoxGeometry(width, crustDepth, depth);
     const crustMat = new THREE.MeshLambertMaterial({ color: p.rock, flatShading: true });
     const crustMesh = new THREE.Mesh(crustGeo, crustMat);

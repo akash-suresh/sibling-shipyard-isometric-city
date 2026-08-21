@@ -30,7 +30,7 @@ export function buildTower(config: {
   const craneMat = new THREE.MeshLambertMaterial({ color: p.crane, flatShading: true });
   
   // 7. Base Plaza
-  const plazaSize = 8;
+  const plazaSize = 5;
   const plazaGeo = new THREE.BoxGeometry(plazaSize, 0.1, plazaSize);
   const plaza = new THREE.Mesh(plazaGeo, plazaMat);
   plaza.position.y = 0.05;

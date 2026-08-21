@@ -50,7 +50,7 @@ export const shipyardZeroLayout: TownLayout = {
   ],
   plazas: [
     // Central Monument Plaza
-    ...Array.from({ length: 5 }, (_, x) => Array.from({ length: 5 }, (_, y) => point(14 + x, 14 + y))).flat(),
+    ...Array.from({ length: 5 }, (_, x) => Array.from({ length: 5 }, (_, y) => point(7 + x, 6 + y))).flat(),
     // Nexus Plaza
     point(14, 4), point(15, 4), point(16, 4),
     point(14, 6), point(15, 6), point(16, 6),

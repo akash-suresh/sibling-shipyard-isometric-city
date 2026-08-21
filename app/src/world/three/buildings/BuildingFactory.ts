@@ -50,6 +50,7 @@ export class BuildingFactory {
       // Add Ground Sign (Iteration 13)
       const groundSign = roofSign.clone();
       groundSign.scale.set(0.08, 0.08, 0.08); // slightly smaller for ground
+      groundSign.position.set(1.5, 0.2, 2.5);
       
       // Archetype specific sign placement
       if (project.building.archetype === 'workshop') {
@@ -57,10 +58,10 @@ export class BuildingFactory {
         groundSign.position.set(2, 0.5, 2);
       } else if (project.building.archetype === 'studio') {
         roofSign.position.set(0, 5, 0);
-        groundSign.position.set(5, 0.5, 5);
+        groundSign.position.set(2, 0.2, 3.5);
       } else if (project.building.archetype === 'tower') {
         roofSign.position.set(0, 8, 0);
-        groundSign.position.set(3, 0.5, 3);
+        groundSign.position.set(1.5, 0.2, 1.5);
       }
       
       result.group.add(roofSign);

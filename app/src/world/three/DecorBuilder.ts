@@ -139,9 +139,9 @@ export class DecorBuilder {
       }
     });
 
-    // Position monument in the center of the 5x5 plaza (16, 16)
-    const plazaCenterX = 16 * CELL_SIZE;
-    const plazaCenterZ = 16 * CELL_SIZE;
+    // Position monument in the center of the 5x5 plaza (9, 8)
+    const plazaCenterX = 9 * CELL_SIZE;
+    const plazaCenterZ = 8 * CELL_SIZE;
     monumentGroup.position.set(plazaCenterX, 0, plazaCenterZ);
     // Rotate to face the camera (isometric camera looks from bottom right)
     monumentGroup.rotation.y = Math.PI / 4;

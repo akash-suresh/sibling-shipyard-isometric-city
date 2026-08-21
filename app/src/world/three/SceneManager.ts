@@ -100,7 +100,7 @@ export class SceneManager {
 
   resize(): void {
     const aspect = this.container.clientWidth / this.container.clientHeight;
-    const frustumSize = 12;
+    const frustumSize = 15;
     this.camera.left = -frustumSize * aspect;
     this.camera.right = frustumSize * aspect;
     this.camera.top = frustumSize;

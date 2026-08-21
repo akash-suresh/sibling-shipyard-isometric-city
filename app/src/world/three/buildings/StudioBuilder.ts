@@ -33,7 +33,7 @@ export function buildStudio(config: {
   const beaconMat = new THREE.MeshLambertMaterial({ color: p.activeLight, emissive: p.activeLight, emissiveIntensity: 1, flatShading: true });
 
   // 1. Building base
-  const baseW = 12, baseH = 0.4, baseD = 10;
+  const baseW = 9, baseH = 0.4, baseD = 7;
   const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(baseW, baseH, baseD), concreteMat);
   baseMesh.position.set(0, baseH / 2, 0);
   baseMesh.castShadow = true;
