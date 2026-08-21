@@ -80,11 +80,15 @@ export class BuildingFactory {
       if (project.building.archetype === 'workshop') {
         roofSign.position.set(0, 4.5, 0);
         groundSign.position.set(2, 0.6, 3.5);
+        roofSign.userData = { revealStart: 0.8, revealEnd: 0.9, baseScale: roofSign.scale.clone() };
+        roofSign.scale.setScalar(0);
         result.group.add(roofSign);
       } else if (project.building.archetype === 'studio') {
         // Skip adding the billboard if a logo is provided; the Studio paints it on its terrace!
         if (!project.logo) {
           roofSign.position.set(0, 6.0, 0);
+          roofSign.userData = { revealStart: 0.8, revealEnd: 0.9, baseScale: roofSign.scale.clone() };
+          roofSign.scale.setScalar(0);
           result.group.add(roofSign);
         }
         // Move ground sign ahead of the footpath, onto the grass
@@ -93,6 +97,8 @@ export class BuildingFactory {
         roofSign.position.set(0, 9.5, 0);
         // Move ground sign further to the front (+Z and +X) into the grass
         groundSign.position.set(4.5, 0.6, 4.5); 
+        roofSign.userData = { revealStart: 0.9, revealEnd: 1.0, baseScale: roofSign.scale.clone() };
+        roofSign.scale.setScalar(0);
         result.group.add(roofSign);
       }
       

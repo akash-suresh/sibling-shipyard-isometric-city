@@ -128,7 +128,7 @@ export function buildTower(config: {
     building: { archetype: 'tower', accent: config.accent }
   });
   groundBillboard.scale.set(0.1, 0.1, 0.1);
-  groundBillboard.position.set(4, 1.5, 4); // Fixed y height
+  groundBillboard.position.set(-4, 1.5, 4); // Moved to front-left edge of the grass!
   groundBillboard.rotation.y = -Math.PI / 4;
   tagTempProp(groundBillboard, 0.0, 0.95); // Disappears right before the roof sign takes over
   
