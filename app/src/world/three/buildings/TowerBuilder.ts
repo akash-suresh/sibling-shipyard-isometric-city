@@ -219,7 +219,7 @@ export function buildTower(config: {
 
   // Communications Array
   const antennaGroup = new THREE.Group();
-  antennaGroup.position.set(roofSize/2 - 0.5, 0.05, roofSize/2 - 0.5);
+  antennaGroup.position.set(roofSize/2 - 0.5, 0.05, -roofSize/2 + 0.5); // Moved to back-right corner to not obscure logo
   tagReveal(antennaGroup, 0.8, 0.9);
   
   const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.1, 2), steelMat);
