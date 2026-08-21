@@ -151,11 +151,11 @@ export class SceneManager {
     
     // Light tweening
     const dayAmbientColor = new THREE.Color(0xffffff);
-    const nightAmbientColor = new THREE.Color(0x3b82f6).multiplyScalar(0.2); // Dark blue
+    const nightAmbientColor = new THREE.Color(0x3b82f6).multiplyScalar(0.6); // Increased base ambient for visibility
     this.ambientLight.color.lerpColors(dayAmbientColor, nightAmbientColor, this.dayNightTransition);
     
     const dayDirColor = new THREE.Color(0xffffff);
-    const nightDirColor = new THREE.Color(0x1e3a8a).multiplyScalar(0.1); // Moonlight
+    const nightDirColor = new THREE.Color(0x5a82e6).multiplyScalar(0.5); // Brighter moonlight so shadows aren't pitch black
     this.dirLight.color.lerpColors(dayDirColor, nightDirColor, this.dayNightTransition);
 
     const dayBgColor = new THREE.Color(visualTokens.palette.canvas);
@@ -164,14 +164,19 @@ export class SceneManager {
       this.scene.background.lerpColors(dayBgColor, nightBgColor, this.dayNightTransition);
     }
 
-    // Tween streetlights and windows
+    // Tween streetlights, windows, and neon signs
     this.scene.traverse((child) => {
       if (child instanceof THREE.PointLight && child.userData.isStreetlight) {
-        child.intensity = this.dayNightTransition * 2.0; // max intensity 2.0
+        // Boosted intensity from 2.0 to 12.0 so they actually illuminate the road!
+        child.intensity = this.dayNightTransition * 12.0; 
       } else if (child instanceof THREE.Mesh) {
-        const mat = child.material as THREE.MeshStandardMaterial | THREE.MeshStandardMaterial;
-        if (mat && mat.emissive && child.userData.isWindow) {
-          mat.emissiveIntensity = THREE.MathUtils.lerp(0.8, 3.0, this.dayNightTransition); // Glow harder at night
+        const mat = child.material as THREE.MeshStandardMaterial;
+        if (mat && mat.emissive) {
+          if (child.userData.isWindow) {
+            mat.emissiveIntensity = THREE.MathUtils.lerp(0.8, 3.0, this.dayNightTransition); // Glow harder at night
+          } else if (child.userData.isSign) {
+            mat.emissiveIntensity = THREE.MathUtils.lerp(0.0, 1.5, this.dayNightTransition); // Signs light up at night!
+          }
         }
       }
     });

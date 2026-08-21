@@ -72,7 +72,7 @@ export class DecorBuilder {
           light.userData.isWindow = true; // Make it glow at night
           mesh.add(light);
           
-          const pointLight = new THREE.PointLight(0xfff5e6, 0.0, 5.0);
+          const pointLight = new THREE.PointLight(0xffeedd, 0.0, 12.0);
           pointLight.position.y = 1.6;
           pointLight.userData.isStreetlight = true;
           mesh.add(pointLight);
