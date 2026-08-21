@@ -129,6 +129,31 @@ export const shipyardZeroLayout: TownLayout = {
       reducedProgress: 0.2,
       offset: point(0, -0.25), // drive on the right side
       accent: "spark",
+    },
+    {
+      id: "car-4",
+      actor: "service-vehicle",
+      waypoints: [point(0, 12), point(12, 12), point(12, 23)],
+      durationMs: 14000,
+      reducedProgress: 0.6,
+      offset: point(0, 0.25), 
+      accent: "nexus",
+    },
+    {
+      id: "person-2",
+      actor: "person",
+      waypoints: [point(14, 4), point(16, 4), point(16, 6), point(14, 6)],
+      durationMs: 22000,
+      reducedProgress: 0.1,
+      offset: point(0.2, 0.2),
+    },
+    {
+      id: "person-3",
+      actor: "person",
+      waypoints: [point(8, 8), point(12, 8), point(12, 10), point(8, 10)],
+      durationMs: 25000,
+      reducedProgress: 0.5,
+      offset: point(-0.2, -0.2),
     }
   ]
 }

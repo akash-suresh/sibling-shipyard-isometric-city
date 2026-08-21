@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Updatable } from '../SceneManager';
 import { visualTokens } from '../../../design/visualTokens';
+import { createTowerCrane, createChainlinkFence, createFoundationPit, createDumpTruck, createExcavator } from './constructionProps';
 
 export interface BuildingResult {
   group: THREE.Group;
@@ -9,10 +10,9 @@ export interface BuildingResult {
 
 export function buildTower(config: {
   name: string;
-  modules: string[];
-  roof?: string;
   accent: string;
   status: string;
+  stage: string;
 }): BuildingResult {
   const group = new THREE.Group();
   
@@ -20,8 +20,10 @@ export function buildTower(config: {
   const p = visualTokens.palette;
   const concreteMat = new THREE.MeshLambertMaterial({ color: p.concrete, flatShading: true });
   const plazaMat = new THREE.MeshLambertMaterial({ color: p.plaza, flatShading: true });
-  const glassMat = new THREE.MeshLambertMaterial({ color: p.glass, flatShading: true });
+  const glassMat = new THREE.MeshLambertMaterial({ color: p.glass, emissive: 0x332200, flatShading: true });
+  glassMat.userData.isWindow = true;
   const windowMat = new THREE.MeshLambertMaterial({ color: 0x111111, emissive: 0x332200, flatShading: true });
+  windowMat.userData.isWindow = true;
   const accentColor = parseInt(config.accent.replace('#', '0x'), 16) || p.nexus;
   const accentMat = new THREE.MeshLambertMaterial({ color: accentColor, flatShading: true });
   const steelMat = new THREE.MeshLambertMaterial({ color: p.metal, flatShading: true });
@@ -67,14 +69,21 @@ export function buildTower(config: {
 
   // 1. Foundation
   const foundationSize = 4;
-  const foundation = new THREE.Mesh(new THREE.BoxGeometry(foundationSize, 0.4, foundationSize), concreteMat);
-  foundation.position.y = 0.3; // 0.1 + 0.2
-  foundation.castShadow = true;
-  foundation.receiveShadow = true;
-  group.add(foundation);
+  const stageIndex = Math.max(0, ["idea", "prototype", "shipped", "landmark"].indexOf(config.stage));
+
+  if (stageIndex === 0 && config.status === "building") {
+    const pit = createFoundationPit(foundationSize + 0.5, foundationSize + 0.5);
+    group.add(pit);
+  } else {
+    const foundation = new THREE.Mesh(new THREE.BoxGeometry(foundationSize, 0.4, foundationSize), concreteMat);
+    foundation.position.y = 0.3; // 0.1 + 0.2
+    foundation.castShadow = true;
+    foundation.receiveShadow = true;
+    group.add(foundation);
+  }
 
   // 2. Main tower - wedding cake
-  const numFloors = 5;
+  const numFloors = [1, 3, 5, 5][stageIndex] || 1; // 1 to 5 floors
   const floorHeight = 1.5;
   let currentY = 0.5; // Top of foundation
   
@@ -191,38 +200,57 @@ export function buildTower(config: {
   group.add(roofPlate);
   
   // 4. Rooftop communications array
-  const antennaHeight = 3.0;
-  const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, antennaHeight), antennaMat);
-  antenna.position.set(-0.5, currentY + antennaHeight/2, -0.5);
-  antenna.castShadow = true;
-  group.add(antenna);
-  
-  // Satellite dish
-  const dish = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2), antennaMat);
-  dish.rotation.x = -Math.PI / 4;
-  dish.position.set(0.5, currentY + 0.5, -0.5);
-  dish.castShadow = true;
-  group.add(dish);
-  
-  // Animated data packets
   const packets: THREE.Mesh[] = [];
-  for (let i = 0; i < 3; i++) {
-    const packet = new THREE.Mesh(new THREE.SphereGeometry(0.08), packetMat);
-    antenna.add(packet);
-    packet.position.set(0, (i - 1) * (antennaHeight / 3), 0);
-    packets.push(packet);
+  if (stageIndex >= 3) { // Landmark
+    const antennaHeight = 3.0;
+    const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, antennaHeight), antennaMat);
+    antenna.position.set(-0.5, currentY + antennaHeight/2, -0.5);
+    antenna.castShadow = true;
+    group.add(antenna);
+    
+    // Satellite dish
+    const dish = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2), antennaMat);
+    dish.rotation.x = -Math.PI / 4;
+    dish.position.set(0.5, currentY + 0.5, -0.5);
+    dish.castShadow = true;
+    group.add(dish);
+    
+    // Animated data packets
+    for (let i = 0; i < 3; i++) {
+      const packet = new THREE.Mesh(new THREE.SphereGeometry(0.08), packetMat);
+      antenna.add(packet);
+      packet.position.set(0, (i - 1) * (antennaHeight / 3), 0);
+      packets.push(packet);
+    }
   }
   
-  // 6. Expansion crane
-  const craneBase = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.0), craneMat);
-  craneBase.position.set(0.5, currentY + 0.5, 0.5);
-  craneBase.castShadow = true;
-  group.add(craneBase);
-  
-  const craneBoom = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.1, 0.1), craneMat);
-  craneBoom.position.set(1.0, currentY + 1.0, 0.5);
-  craneBoom.castShadow = true;
-  group.add(craneBoom);
+  // 6. Construction VFX
+  let craneAnim: Updatable | undefined;
+  if (config.status === "building") {
+    // Fence around the plaza
+    const fence = createChainlinkFence(plazaSize + 0.2, plazaSize + 0.2);
+    fence.position.y = 0.1;
+    group.add(fence);
+    
+    // Massive tower crane
+    const craneHeight = Math.max(4.0, currentY + 2.0);
+    const crane = createTowerCrane(craneHeight);
+    crane.group.position.set(-plazaSize/2 - 0.5, 0.1, -plazaSize/2 - 0.5);
+    group.add(crane.group);
+    craneAnim = crane.updatable;
+    
+    // Dump truck and excavator
+    if (stageIndex >= 1) {
+      const truck = createDumpTruck();
+      truck.position.set(plazaSize/2 - 0.5, 0.1, plazaSize/2 - 1.0);
+      truck.rotation.y = Math.PI / 4;
+      group.add(truck);
+      
+      const excavator = createExcavator();
+      excavator.position.set(-plazaSize/2 + 1.0, 0.1, plazaSize/2 - 0.5);
+      group.add(excavator);
+    }
+  }
 
   // Updatable implementation
   const updatable: Updatable = {
@@ -232,10 +260,14 @@ export function buildTower(config: {
       
       packets.forEach((packet) => {
         packet.position.y += deltaTime * 2.0;
-        if (packet.position.y > antennaHeight / 2) {
-          packet.position.y = -antennaHeight / 2;
+        if (packet.position.y > 1.5) { // antennaHeight / 2
+          packet.position.y = -1.5;
         }
       });
+      
+      if (craneAnim) {
+        craneAnim.update(deltaTime, 0); // time doesn't matter for crane update logic
+      }
     }
   };
 

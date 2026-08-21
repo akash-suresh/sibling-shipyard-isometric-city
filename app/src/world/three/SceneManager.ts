@@ -25,13 +25,18 @@ export class SceneManager {
   private boundResize: () => void;
   private container: HTMLElement;
 
+  private ambientLight: THREE.AmbientLight;
+  private dirLight: THREE.DirectionalLight;
+  private isNightMode: boolean = false;
+  private dayNightTransition: number = 0; // 0 = day, 1 = night
+
   constructor(container: HTMLElement) {
     this.container = container;
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(visualTokens.palette.canvas);
 
     const aspect = container.clientWidth / container.clientHeight;
-    const frustumSize = 20;
+    const frustumSize = 17.5;
     this.camera = new THREE.OrthographicCamera(
       -frustumSize * aspect,
       frustumSize * aspect,
@@ -52,20 +57,22 @@ export class SceneManager {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     container.appendChild(this.renderer.domElement);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
-    this.scene.add(ambientLight);
+    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    this.scene.add(this.ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.5); // Stronger sun
-    dirLight.position.set(-30, 25, 5); // Lower angle, more sideways for long shadows
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
-    dirLight.shadow.camera.left = -30;
-    dirLight.shadow.camera.right = 30;
-    dirLight.shadow.camera.top = 30;
-    dirLight.shadow.camera.bottom = -30;
-    dirLight.shadow.bias = -0.0005;
-    this.scene.add(dirLight);
+    this.dirLight = new THREE.DirectionalLight(0xffffff, 1.5); // Stronger sun
+    this.dirLight.position.set(-30, 25, 5); // Lower angle, more sideways for long shadows
+    this.dirLight.castShadow = true;
+    
+    // Optimize shadow map
+    this.dirLight.shadow.mapSize.width = 2048;
+    this.dirLight.shadow.mapSize.height = 2048;
+    this.dirLight.shadow.camera.left = -30;
+    this.dirLight.shadow.camera.right = 30;
+    this.dirLight.shadow.camera.top = 30;
+    this.dirLight.shadow.camera.bottom = -30;
+    this.dirLight.shadow.bias = -0.0005;
+    this.scene.add(this.dirLight);
 
     this.composer = new EffectComposer(this.renderer);
     const renderPass = new RenderPass(this.scene, this.camera);
@@ -106,6 +113,7 @@ export class SceneManager {
     this.camera.top = frustumSize;
     this.camera.bottom = -frustumSize;
     this.camera.updateProjectionMatrix();
+
     this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
     this.composer.setSize(this.container.clientWidth, this.container.clientHeight);
   }
@@ -118,11 +126,41 @@ export class SceneManager {
     this.updatables.delete(updatable);
   }
 
+  setNightMode(isNight: boolean): void {
+    this.isNightMode = isNight;
+  }
+
   update(): void {
     this.clock.update();
     const delta = this.clock.getDelta();
     const time = this.clock.getElapsed();
     this.cameraControls.update(delta);
+    
+    // Day/Night transition
+    const targetTransition = this.isNightMode ? 1 : 0;
+    this.dayNightTransition = THREE.MathUtils.lerp(this.dayNightTransition, targetTransition, delta * 2);
+    
+    // Light tweening
+    const dayAmbientColor = new THREE.Color(0xffffff);
+    const nightAmbientColor = new THREE.Color(0x3b82f6).multiplyScalar(0.2); // Dark blue
+    this.ambientLight.color.lerpColors(dayAmbientColor, nightAmbientColor, this.dayNightTransition);
+    
+    const dayDirColor = new THREE.Color(0xffffff);
+    const nightDirColor = new THREE.Color(0x1e3a8a).multiplyScalar(0.1); // Moonlight
+    this.dirLight.color.lerpColors(dayDirColor, nightDirColor, this.dayNightTransition);
+
+    // Tween streetlights and windows
+    this.scene.traverse((child) => {
+      if (child instanceof THREE.PointLight && child.userData.isStreetlight) {
+        child.intensity = this.dayNightTransition * 2.0; // max intensity 2.0
+      } else if (child instanceof THREE.Mesh) {
+        const mat = child.material as THREE.MeshLambertMaterial | THREE.MeshStandardMaterial;
+        if (mat && mat.emissive && child.userData.isWindow) {
+          mat.emissiveIntensity = THREE.MathUtils.lerp(0.8, 3.0, this.dayNightTransition); // Glow harder at night
+        }
+      }
+    });
+
     for (const u of this.updatables) {
       u.update(delta, time);
     }

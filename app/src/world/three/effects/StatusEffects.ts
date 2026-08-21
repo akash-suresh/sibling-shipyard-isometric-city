@@ -127,7 +127,7 @@ export function applyStatusEffects(group: THREE.Group, status: string): Updatabl
       group.add(truck);
       break;
     }
-    case 'paused': {
+    case 'archived': {
       // Dim the building
       group.traverse((child) => {
         if (child instanceof THREE.Mesh) {
@@ -146,9 +146,7 @@ export function applyStatusEffects(group: THREE.Group, status: string): Updatabl
           }
         }
       });
-      break;
-    }
-    case 'archived': {
+
       // Overgrown state, green vines
       const vineGeo = new THREE.BoxGeometry(0.2, 2, 0.2);
       const vineMat = new THREE.MeshLambertMaterial({ flatShading: true, color: 0x228B22 });

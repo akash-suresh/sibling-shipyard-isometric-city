@@ -106,7 +106,7 @@ flowchart LR
 
 **Orion exit test:** without its label or accent, Orion reads as a construction site with coherent top, left, and right faces. Its Public Beta upgrade reaches the same final state with and without motion, current tests/build pass, and the default-camera screenshot is visually approved.
 
-**Current status:** the first programmatic town block is integrated: raised island, roads, trees, lamps, distinct Orion/Spark/Nexus silhouettes, a walker, a service vehicle, and the deterministic Orion upgrade. The beauty target now guides composition rather than blocking the playable game-world slice.
+**Current status:** M4 (Living World) is now complete. We have integrated: raised island, expanded roads, trees, lamps, distinct Orion/Spark/Nexus silhouettes, ambient traffic (vehicles and pedestrians), Day/Night cycle, and the deterministic Orion upgrade. The beauty target now guides composition rather than blocking the playable game-world slice.
 
 ## Stop condition
 

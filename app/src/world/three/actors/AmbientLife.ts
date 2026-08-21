@@ -16,23 +16,23 @@ class AmbientActor {
     
     // Create visuals based on actor type
     if (route.actor === 'person') {
-      const bodyGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.2);
-      const headGeo = new THREE.SphereGeometry(0.06);
+      const bodyGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.5);
+      const headGeo = new THREE.SphereGeometry(0.15);
       const mat = new THREE.MeshStandardMaterial({ color: 0x888888 });
       const body = new THREE.Mesh(bodyGeo, mat);
-      body.position.y = 0.1;
+      body.position.y = 0.25;
       const head = new THREE.Mesh(headGeo, mat);
-      head.position.y = 0.25;
+      head.position.y = 0.6;
       this.mesh.add(body, head);
     } else if (route.actor === 'service-vehicle') {
-      const boxGeo = new THREE.BoxGeometry(0.4, 0.25, 0.6);
-      const cabGeo = new THREE.BoxGeometry(0.4, 0.2, 0.3);
+      const boxGeo = new THREE.BoxGeometry(1.0, 0.6, 1.5);
+      const cabGeo = new THREE.BoxGeometry(1.0, 0.5, 0.75);
       
       const mat = new THREE.MeshStandardMaterial({ color: route.accent === 'orion' ? 0x3b82f6 : 0xd1d5db });
       const box = new THREE.Mesh(boxGeo, mat);
-      box.position.y = 0.125;
+      box.position.y = 0.3;
       const cab = new THREE.Mesh(cabGeo, mat);
-      cab.position.set(0, 0.35, 0.15);
+      cab.position.set(0, 0.85, 0.375);
       this.mesh.add(box, cab);
     }
     
@@ -55,33 +55,32 @@ class AmbientActor {
 
     const currentDist = this.progress * this.totalDistance;
     let distAccum = 0;
-    
-    for (let i = 0; i < this.route.waypoints.length - 1; i++) {
-      const segDist = this.segmentDistances[i];
-      if (currentDist <= distAccum + segDist || i === this.route.waypoints.length - 2) {
-        const segProgress = (currentDist - distAccum) / segDist;
-        const p1 = this.route.waypoints[i];
-        const p2 = this.route.waypoints[i + 1];
-        
-        const x = p1.x + (p2.x - p1.x) * segProgress;
-        const y = p1.y + (p2.y - p1.y) * segProgress;
-        
-        const worldX = x * CELL_SIZE;
-        const worldZ = y * CELL_SIZE;
-        
-        this.mesh.position.set(worldX, 0, worldZ);
-        
-        // Orient mesh
-        if (segDist > 0.01) {
-          const dx = (p2.x - p1.x);
-          const dy = (p2.y - p1.y);
-          this.mesh.rotation.y = Math.atan2(-dy, dx) + Math.PI / 2;
+        for (let i = 0; i < this.route.waypoints.length - 1; i++) {
+        const segDist = this.segmentDistances[i];
+        if (currentDist <= distAccum + segDist || i === this.route.waypoints.length - 2) {
+          const segProgress = (currentDist - distAccum) / segDist;
+          const p1 = this.route.waypoints[i];
+          const p2 = this.route.waypoints[i + 1];
+          
+          const x = p1.x + (p2.x - p1.x) * segProgress;
+          const y = p1.y + (p2.y - p1.y) * segProgress;
+          
+          const worldX = x * CELL_SIZE;
+          const worldZ = y * CELL_SIZE;
+          
+          this.mesh.position.set(worldX, 0, worldZ);
+          
+          // Orient mesh
+          if (segDist > 0.01) {
+            const dx = (p2.x - p1.x);
+            const dy = (p2.y - p1.y);
+            this.mesh.rotation.y = Math.atan2(-dy, dx) + Math.PI / 2;
+          }
+          
+          break;
         }
-        
-        break;
+        distAccum += segDist;
       }
-      distAccum += segDist;
-    }
   }
 }
 

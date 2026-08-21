@@ -21,6 +21,7 @@ export function App() {
     status: "ready",
     playCount: 0,
   });
+  const [isNightMode, setIsNightMode] = useState(false);
   
   const selectProject = useCallback((id: string) => setSelectedId(id), []);
   const finishMilestone = useCallback(
@@ -41,6 +42,13 @@ export function App() {
         <h1>Sibling Shipyard</h1>
         <span>Things we're building.</span>
       </header>
+
+      <button 
+        onClick={() => setIsNightMode(!isNightMode)}
+        style={{ position: 'absolute', right: '40px', bottom: '40px', zIndex: 10, padding: '12px 24px', borderRadius: '12px', background: isNightMode ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.8)', color: isNightMode ? '#fff' : '#333', border: '1px solid rgba(128,128,128,0.2)', cursor: 'pointer', fontWeight: 600, backdropFilter: 'blur(12px)' }}
+      >
+        {isNightMode ? '☀️ Day' : '🌙 Night'}
+      </button>
 
       <div className="view-switch" role="group" aria-label="Shipyard view">
         <button
@@ -64,7 +72,7 @@ export function App() {
       </div>
 
       {view === "world" ? (
-        <ThreeShipyardCanvas projects={projects} />
+        <ThreeShipyardCanvas projects={projects} isNightMode={isNightMode} />
       ) : view === "playground" ? (
         <PlaygroundControls />
       ) : (

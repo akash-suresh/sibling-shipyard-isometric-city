@@ -8,16 +8,12 @@ import { applyStatusEffects } from "./three/effects/StatusEffects";
 import { applyStageEffects } from "./three/effects/StageEffects";
 import type {
   BuildingArchetype,
-  BuildingModuleKind,
   ProjectStage,
   ProjectStatus,
-  RoofFeatureKind,
 } from "../data/types";
 
 interface PlaygroundCanvasProps {
   archetype: BuildingArchetype;
-  modules: BuildingModuleKind[];
-  roof: RoofFeatureKind | "none";
   stage: ProjectStage;
   status: ProjectStatus;
   accent: string;
@@ -25,8 +21,6 @@ interface PlaygroundCanvasProps {
 
 export function PlaygroundCanvas({
   archetype,
-  modules,
-  roof,
   stage,
   status,
   accent,
@@ -70,11 +64,10 @@ export function PlaygroundCanvas({
     updatablesRef.current = [];
 
     const config = {
-      name: "Playground Building",
-      modules,
-      roof: roof === "none" ? undefined : roof,
-      accent,
-      status,
+      name: "Playground",
+      accent: accent,
+      status: status,
+      stage: stage,
     };
 
     let result;
@@ -110,7 +103,7 @@ export function PlaygroundCanvas({
     updatables.forEach((u) => sm.registerUpdatable(u));
     updatablesRef.current = updatables;
 
-  }, [archetype, modules, roof, stage, status, accent]);
+  }, [archetype, stage, status, accent]);
 
   return <div className="canvas-host" ref={host} style={{ width: "100%", height: "100%" }} aria-hidden="true" />;
 }

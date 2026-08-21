@@ -5,6 +5,6 @@
     "title": "Public Beta reached",
     "date": "August 19, 2026",
     "event": "construction-upgrade",
-    "resultingModules": ["lab-floor", "beta-floor"]
+    "resultingStage": "shipped"
   }
 ]

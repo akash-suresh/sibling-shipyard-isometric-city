@@ -52,7 +52,13 @@ export class DecorBuilder {
 
           const light = new THREE.Mesh(new THREE.SphereGeometry(0.15), lampMat);
           light.position.y = 1.6;
+          light.userData.isWindow = true; // Make it glow at night
           mesh.add(light);
+          
+          const pointLight = new THREE.PointLight(0xfff5e6, 0.0, 5.0);
+          pointLight.position.y = 1.6;
+          pointLight.userData.isStreetlight = true;
+          mesh.add(pointLight);
           break;
         }
         case "bench": {

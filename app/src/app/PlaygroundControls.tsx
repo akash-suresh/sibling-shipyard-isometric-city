@@ -2,50 +2,29 @@ import { useState } from "react";
 import { PlaygroundCanvas } from "../world/PlaygroundCanvas";
 import {
   buildingArchetypes,
-  buildingModuleKinds,
   projectStages,
   projectStatuses,
-  roofFeatureKinds,
-  buildingPartCompatibility,
 } from "../data/types";
 import type {
   BuildingArchetype,
-  BuildingModuleKind,
   ProjectStage,
   ProjectStatus,
-  RoofFeatureKind,
 } from "../data/types";
 
 export function PlaygroundControls() {
   const [archetype, setArchetype] = useState<BuildingArchetype>("workshop");
-  const [modules, setModules] = useState<BuildingModuleKind[]>([]);
-  const [roof, setRoof] = useState<RoofFeatureKind | "none">("none");
   const [stage, setStage] = useState<ProjectStage>("idea");
   const [status, setStatus] = useState<ProjectStatus>("building");
   const [accent, setAccent] = useState<string>("#6c7bd9");
 
-  const compatibleModules = buildingPartCompatibility[archetype].modules;
-  const compatibleRoofs = buildingPartCompatibility[archetype].roofs;
-
   const handleArchetypeChange = (newArchetype: BuildingArchetype) => {
     setArchetype(newArchetype);
-    // Clear incompatible modules and roof
-    setModules([]);
-    setRoof("none");
-  };
-
-  const toggleModule = (mod: BuildingModuleKind) => {
-    setModules((prev) =>
-      prev.includes(mod) ? prev.filter((m) => m !== mod) : [...prev, mod],
-    );
   };
 
   return (
     <div className="playground-view">
       <PlaygroundCanvas
         archetype={archetype}
-        modules={modules}
-        roof={roof}
         stage={stage}
         status={status}
         accent={accent}
@@ -67,43 +46,6 @@ export function PlaygroundControls() {
               </button>
             ))}
           </div>
-        </div>
-
-        <div className="control-group">
-          <h3>Modules</h3>
-          <div className="toggle-list">
-            {buildingModuleKinds.map((mod) => {
-              const isCompatible = compatibleModules.includes(mod as any);
-              return (
-                <label key={mod} className={isCompatible ? "" : "disabled"}>
-                  <input
-                    type="checkbox"
-                    checked={modules.includes(mod)}
-                    onChange={() => toggleModule(mod)}
-                    disabled={!isCompatible}
-                  />
-                  {mod}
-                </label>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="control-group">
-          <h3>Roof Feature</h3>
-          <select
-            value={roof}
-            onChange={(e) =>
-              setRoof(e.target.value as RoofFeatureKind | "none")
-            }
-          >
-            <option value="none">None</option>
-            {compatibleRoofs.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
         </div>
 
         <div className="control-group">

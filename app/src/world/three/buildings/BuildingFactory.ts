@@ -20,10 +20,9 @@ export class BuildingFactory {
 
       const config = {
         name: project.name,
-        modules: project.building.modules,
-        roof: project.building.roof,
         accent: project.building.accent,
-        status: project.status
+        status: project.status,
+        stage: project.stage
       };
 
       if (project.building.archetype === 'workshop') {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { validateProjects } from "./loadProjects"
-import { buildingArchetypes, buildingModuleKinds, projectStages, projectStatuses, roofFeatureKinds } from "./types"
+import { buildingArchetypes, projectStages, projectStatuses } from "./types"
 
 const validProject = {
   id: "test",
@@ -9,7 +9,7 @@ const validProject = {
   stage: "idea",
   status: "building",
   grid: { x: 1, y: 2 },
-  building: { archetype: "workshop", modules: [], accent: "#ffffff" },
+  building: { archetype: "workshop", accent: "#ffffff" },
 }
 
 describe("validateProjects", () => {
@@ -33,29 +33,8 @@ describe("validateProjects", () => {
     expect(() => validateProjects([{ ...validProject, building: { ...validProject.building, archetype: "castle" } }])).toThrow("Project test has an unknown building archetype")
   })
 
-  it("rejects malformed building modules and accents", () => {
-    expect(() => validateProjects([{ ...validProject, building: { ...validProject.building, modules: [42] } }])).toThrow("Project test has invalid building modules")
+  it("rejects malformed building accents", () => {
     expect(() => validateProjects([{ ...validProject, building: { ...validProject.building, accent: "purple" } }])).toThrow("Project test has an invalid building accent")
-  })
-
-  it.each(buildingModuleKinds)("recognises the %s module key", (module) => {
-    const buildingByModule = {
-      "lab-floor": { archetype: "workshop", roof: "crane" }, "beta-floor": { archetype: "workshop", roof: "crane" },
-      "office-floor": { archetype: "studio", roof: "beacon" }, "tower-floor": { archetype: "tower", roof: "antenna" }, "sky-wing": { archetype: "tower", roof: "antenna" },
-    } as const
-    const choice = buildingByModule[module]
-    expect(validateProjects([{ ...validProject, building: { ...choice, modules: [module], accent: "#ffffff" } }])[0].building.modules).toEqual([module])
-  })
-
-  it.each(roofFeatureKinds)("recognises the %s roof key", (roof) => {
-    const buildingByRoof = { crane: { archetype: "workshop", modules: ["lab-floor"] }, beacon: { archetype: "studio", modules: ["office-floor"] }, antenna: { archetype: "tower", modules: ["tower-floor"] } } as const
-    const choice = buildingByRoof[roof]
-    expect(validateProjects([{ ...validProject, building: { ...choice, roof, accent: "#ffffff" } }])[0].building.roof).toBe(roof)
-  })
-
-  it("rejects unknown and archetype-incompatible building parts", () => {
-    expect(() => validateProjects([{ ...validProject, building: { ...validProject.building, modules: ["castle-floor"] } }])).toThrow("invalid building modules")
-    expect(() => validateProjects([{ ...validProject, building: { archetype: "studio", modules: ["lab-floor"], roof: "beacon", accent: "#ffffff" } }])).toThrow("incompatible with studio")
   })
 
   it("rejects lifecycle stages outside the canonical vocabulary", () => {

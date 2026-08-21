@@ -9,11 +9,11 @@ export class SelectionManager implements Updatable {
   private domElement: HTMLElement;
   private buildingsGroup: THREE.Group;
   
-  private hoveredMesh: THREE.Mesh | null = null;
   private selectedProjectId: string | null = null;
   private selectionRing: THREE.Mesh;
+  private currentHoveredGroup: THREE.Group | null = null;
   
-  private onSelectCallback?: (projectId: string | null) => void;
+  private onSelectCallback?: (projectId: string | null, worldPos: THREE.Vector3 | null) => void;
 
   constructor(camera: THREE.Camera, scene: THREE.Scene, buildingsGroup: THREE.Group, domElement: HTMLElement) {
     this.camera = camera;
@@ -36,7 +36,7 @@ export class SelectionManager implements Updatable {
     this.domElement.addEventListener('click', this.onClick);
   }
 
-  public onSelect(cb: (projectId: string | null) => void) {
+  public onSelect(cb: (projectId: string | null, worldPos: THREE.Vector3 | null) => void) {
     this.onSelectCallback = cb;
   }
 
@@ -75,7 +75,7 @@ export class SelectionManager implements Updatable {
         this.selectionRing.visible = true;
         
         if (this.onSelectCallback) {
-          this.onSelectCallback(projectId);
+          this.onSelectCallback(projectId, worldPos);
         }
         return;
       }
@@ -85,7 +85,7 @@ export class SelectionManager implements Updatable {
     this.selectedProjectId = null;
     this.selectionRing.visible = false;
     if (this.onSelectCallback) {
-      this.onSelectCallback(null);
+      this.onSelectCallback(null, null);
     }
   };
 
@@ -101,37 +101,33 @@ export class SelectionManager implements Updatable {
     this.raycaster.setFromCamera(this.mouse, this.camera);
     const intersects = this.raycaster.intersectObjects(this.buildingsGroup.children, true);
     
-    // Clear previous hover
-    if (this.hoveredMesh) {
-      const mat = this.hoveredMesh.material as THREE.MeshStandardMaterial;
-      if (mat.emissive) {
-        mat.emissive.setHex(this.hoveredMesh.userData.originalEmissive || 0x000000);
-      }
-      this.hoveredMesh = null;
-    }
+    let newHoveredGroup: THREE.Group | null = null;
     
     if (intersects.length > 0) {
       let obj: THREE.Object3D | null = intersects[0].object;
-      let isBuilding = false;
       while (obj && obj !== this.buildingsGroup) {
         if (obj.userData && obj.userData.projectId) {
-          isBuilding = true;
+          newHoveredGroup = obj as THREE.Group;
           break;
         }
         obj = obj.parent;
       }
-      
-      if (isBuilding && intersects[0].object instanceof THREE.Mesh) {
-        this.hoveredMesh = intersects[0].object;
-        const mat = this.hoveredMesh.material as THREE.MeshStandardMaterial;
-        if (mat.emissive) {
-          if (this.hoveredMesh.userData.originalEmissive === undefined) {
-            this.hoveredMesh.userData.originalEmissive = mat.emissive.getHex();
-          }
-          mat.emissive.setHex(0x333333); // Subtle highlight
-        }
-      }
     }
+    
+    if (newHoveredGroup !== this.currentHoveredGroup) {
+      this.currentHoveredGroup = newHoveredGroup;
+    }
+    
+    // Update cursor
+    this.domElement.style.cursor = this.currentHoveredGroup ? 'pointer' : 'default';
+
+    // Lerp all building scales back to normal (or just leave them)
+    // Actually, I'll just remove the scaling behavior, but to reset it I should set scale to 1.
+    this.buildingsGroup.children.forEach(child => {
+      if (child.userData && child.userData.projectId) {
+        child.scale.set(1, 1, 1);
+      }
+    });
   }
 
   dispose(): void {

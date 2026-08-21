@@ -77,7 +77,7 @@ Extract reusable bases, floors, roofs, signs, landscaping, status effects, and e
 
 Add ambient people, vehicles, deliveries, machines, richer landscaping, and temporary world events.
 
-**Done when:** the world remains readable and performant while activity responds to every supported status.
+**Done when:** the world remains readable and performant while activity responds to every supported status. **(COMPLETED)**
 
 ### M5 · History — L
 

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Updatable } from '../SceneManager';
 import { visualTokens } from '../../../design/visualTokens';
+import { createTowerCrane, createChainlinkFence, createFoundationPit, createDumpTruck, createExcavator } from './constructionProps';
 
 export interface BuildingResult {
   group: THREE.Group;
@@ -9,10 +10,9 @@ export interface BuildingResult {
 
 export function buildStudio(config: {
   name: string;
-  modules: string[];
-  roof?: string;
   accent: string;
   status: string;
+  stage: string;
 }): BuildingResult {
   const group = new THREE.Group();
 
@@ -21,6 +21,7 @@ export function buildStudio(config: {
   const concreteMat = new THREE.MeshLambertMaterial({ color: p.concrete, flatShading: true });
   const wallMat = new THREE.MeshLambertMaterial({ color: p.structure, flatShading: true });
   const glassMat = new THREE.MeshLambertMaterial({ color: p.glass, emissive: 0x332200, flatShading: true });
+  glassMat.userData.isWindow = true;
   const accentColor = new THREE.Color(config.accent || p.spark);
   const accentMat = new THREE.MeshLambertMaterial({ color: accentColor, flatShading: true });
   const doorwayMat = new THREE.MeshLambertMaterial({ color: 0x222222, flatShading: true });
@@ -34,14 +35,21 @@ export function buildStudio(config: {
 
   // 1. Building base
   const baseW = 9, baseH = 0.4, baseD = 7;
-  const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(baseW, baseH, baseD), concreteMat);
-  baseMesh.position.set(0, baseH / 2, 0);
-  baseMesh.castShadow = true;
-  baseMesh.receiveShadow = true;
-  group.add(baseMesh);
+  const stageIndex = Math.max(0, ["idea", "prototype", "shipped", "landmark"].indexOf(config.stage));
+
+  if (stageIndex === 0 && config.status === "building") {
+    const pit = createFoundationPit(baseW + 0.5, baseD + 0.5);
+    group.add(pit);
+  } else {
+    const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(baseW, baseH, baseD), concreteMat);
+    baseMesh.position.set(0, baseH / 2, 0);
+    baseMesh.castShadow = true;
+    baseMesh.receiveShadow = true;
+    group.add(baseMesh);
+  }
 
   // 2. Main building body
-  const numFloors = config.modules.length > 0 ? Math.max(2, config.modules.length + 1) : 3;
+  const numFloors = [1, 2, 2, 3][stageIndex] || 1; // 1 to 3 floors
   const floorH = 2.5;
   const buildW = 10;
   const buildD = 8;
@@ -159,7 +167,7 @@ export function buildStudio(config: {
   const updatables: Updatable[] = [];
   let timeElapsed = 0;
 
-  if (config.roof === 'beacon') {
+  if (stageIndex >= 3) { // Landmark
     const beaconBase = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.5, 0.6), hvacMat);
     beaconBase.position.set(0, 0.3, 1);
     beaconBase.castShadow = true;
@@ -242,6 +250,33 @@ export function buildStudio(config: {
   p1Bush.castShadow = true;
   group.add(p1Bush);
 
+  // 6.5 Construction VFX
+  if (config.status === "building") {
+    // Fence around the studio
+    const fence = createChainlinkFence(baseW + 1.0, baseD + 2.0);
+    fence.position.y = 0.1;
+    group.add(fence);
+    
+    // Massive tower crane
+    const craneHeight = Math.max(4.0, totalH + 2.0);
+    const crane = createTowerCrane(craneHeight);
+    crane.group.position.set(baseW/2 + 0.5, 0.1, -baseD/2 + 0.5);
+    group.add(crane.group);
+    updatables.push(crane.updatable);
+    
+    // Dump truck and excavator
+    if (stageIndex >= 1) {
+      const truck = createDumpTruck();
+      truck.position.set(-baseW/2 - 0.5, 0.1, baseD/2 - 1.0);
+      truck.rotation.y = -Math.PI / 4;
+      group.add(truck);
+      
+      const excavator = createExcavator();
+      excavator.position.set(-baseW/2 + 1.0, 0.1, -baseD/2 - 0.5);
+      group.add(excavator);
+    }
+  }
+
   // 7. Visitors
   function createPerson(x: number, z: number, rot: number, color: number, yOffset: number) {
     const personGroup = new THREE.Group();
@@ -263,31 +298,35 @@ export function buildStudio(config: {
     return personGroup;
   }
   
-  group.add(createPerson(1.5, 4.5, -Math.PI / 4, 0x2196F3, baseH));
-  group.add(createPerson(1, 6, -Math.PI / 2, 0xE91E63, 0));
+  if (stageIndex >= 1 && config.status === "live") { // Prototype or later
+    group.add(createPerson(1.5, 4.5, -Math.PI / 4, 0x2196F3, baseH));
+    group.add(createPerson(1, 6, -Math.PI / 2, 0xE91E63, 0));
+  }
 
   // 8. Coffee cart
-  const cartGroup = new THREE.Group();
-  cartGroup.position.set(-4, 0, 7);
-  group.add(cartGroup);
+  if (stageIndex >= 2 && config.status === "live") { // Shipped or later
+    const cartGroup = new THREE.Group();
+    cartGroup.position.set(-4, 0, 7);
+    group.add(cartGroup);
 
-  const cartBody = new THREE.Mesh(new THREE.BoxGeometry(2, 1.5, 1.5), cartMat);
-  cartBody.position.y = 0.95;
-  cartBody.castShadow = true;
-  cartGroup.add(cartBody);
-  
-  const cartRoof = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.1, 2.2), new THREE.MeshStandardMaterial({ color: 0xFFFFFF }));
-  cartRoof.position.y = 1.75;
-  cartRoof.castShadow = true;
-  cartGroup.add(cartRoof);
+    const cartBody = new THREE.Mesh(new THREE.BoxGeometry(2, 1.5, 1.5), cartMat);
+    cartBody.position.y = 0.95;
+    cartBody.castShadow = true;
+    cartGroup.add(cartBody);
+    
+    const cartRoof = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.1, 2.2), new THREE.MeshStandardMaterial({ color: 0xFFFFFF }));
+    cartRoof.position.y = 1.75;
+    cartRoof.castShadow = true;
+    cartGroup.add(cartRoof);
 
-  for (let wx of [-0.6, 0.6]) {
-    for (let wz of [-0.8, 0.8]) {
-      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.1), wheelMat);
-      wheel.rotation.x = Math.PI / 2;
-      wheel.position.set(wx, 0.25, wz);
-      wheel.castShadow = true;
-      cartGroup.add(wheel);
+    for (let wx of [-0.6, 0.6]) {
+      for (let wz of [-0.8, 0.8]) {
+        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.1), wheelMat);
+        wheel.rotation.x = Math.PI / 2;
+        wheel.position.set(wx, 0.25, wz);
+        wheel.castShadow = true;
+        cartGroup.add(wheel);
+      }
     }
   }
 
