@@ -42,8 +42,9 @@ function tagTempProp(obj: THREE.Object3D, start: number, end: number) {
 export function buildTower(config: {
   name: string;
   accent: string;
-  status: string;
-  stage: string;
+  status: 'building' | 'live' | 'incident' | 'archived';
+  stage: 'idea' | 'prototype' | 'shipped' | 'landmark';
+  logo?: string;
 }): BuildingResult {
   const group = new THREE.Group();
   
@@ -121,12 +122,13 @@ export function buildTower(config: {
   const groundBillboard = createBuildingSign({
     id: 'temp',
     name: config.name,
+    summary: '',
     status: config.status,
     stage: config.stage,
     logo: config.logo,
     grid: { x: 0, y: 0 },
     building: { archetype: 'tower', accent: config.accent }
-  });
+  }, true);
   groundBillboard.scale.set(0.1, 0.1, 0.1);
   groundBillboard.position.set(-4, 1.5, 4); // Moved to front-left edge of the grass!
   groundBillboard.rotation.y = -Math.PI / 4;

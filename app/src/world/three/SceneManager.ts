@@ -1,9 +1,8 @@
 import * as THREE from 'three';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js';
+import { WebGPURenderer, PostProcessing } from 'three/webgpu';
+import { pass, mrt, output, emissive, normalView } from 'three/tsl';
+import { bloom } from 'three/examples/jsm/tsl/display/BloomNode.js';
+import { ao } from 'three/examples/jsm/tsl/display/GTAONode.js';
 import { IsometricCamera } from './IsometricCamera';
 import { visualTokens } from '../../design/visualTokens';
 
@@ -14,11 +13,9 @@ export interface Updatable {
 export class SceneManager {
   scene: THREE.Scene;
   camera: THREE.OrthographicCamera;
-  renderer: THREE.WebGLRenderer;
-  composer: EffectComposer;
+  renderer: WebGPURenderer;
   worldGroup: THREE.Group;
   clock: THREE.Timer;
-  ssaoPass: SSAOPass;
   
   cameraControls: IsometricCamera;
   private updatables: Set<Updatable> = new Set();
@@ -51,12 +48,11 @@ export class SceneManager {
     this.camera.position.set(20, 20, 20);
     this.camera.lookAt(0, 0, 0);
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    this.renderer = new WebGPURenderer({ antialias: true, alpha: true });
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    // WebGPURenderer in r185 automatically uses the correct color space (SRGB is default for output)
     container.appendChild(this.renderer.domElement);
 
     this.ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
@@ -76,26 +72,33 @@ export class SceneManager {
     this.dirLight.shadow.bias = -0.0005;
     this.scene.add(this.dirLight);
 
-    this.composer = new EffectComposer(this.renderer);
-    const renderPass = new RenderPass(this.scene, this.camera);
-    this.composer.addPass(renderPass);
+    // --- WebGPU PostProcessing ---
+    const scenePass = pass(this.scene, this.camera);
+    scenePass.setMRT(mrt({
+      output,
+      emissive,
+      normal: normalView
+    }));
 
-    this.ssaoPass = new SSAOPass(this.scene, this.camera, container.clientWidth, container.clientHeight);
-    this.ssaoPass.kernelRadius = 16;
-    this.ssaoPass.minDistance = 0.005;
-    this.ssaoPass.maxDistance = 0.05;
-    this.composer.addPass(this.ssaoPass);
+    const outputPass = scenePass.getTextureNode('output');
+    const emissivePass = scenePass.getTextureNode('emissive');
+    const normalPass = scenePass.getTextureNode('normal');
+    const depthPass = scenePass.getTextureNode('depth');
 
-    const bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(container.clientWidth, container.clientHeight),
-      0.35,  // strength
-      0.5,  // radius
-      1.5   // threshold (only affects highly emissive objects)
-    );
-    this.composer.addPass(bloomPass);
+    // Bloom Node (strength: 0.35, radius: 0.5, threshold: 1.5)
+    const bloomNode = bloom(emissivePass, 0.35, 0.5, 1.5);
 
-    const outputPass = new OutputPass();
-    this.composer.addPass(outputPass);
+    // Ambient Occlusion Node
+    // Note: GTAONode generally expects PerspectiveCamera, but we'll feed it the Ortho
+    const aoNode = ao(depthPass, normalPass, this.camera);
+
+    // Combine Output + Bloom, and multiply by AO (AO is stored in the red channel)
+    const finalNode = outputPass.add(bloomNode).mul(aoNode.getTextureNode().r);
+    
+    const postProcessing = new PostProcessing(this.renderer);
+    postProcessing.outputNode = finalNode;
+    // We attach the postProcessing instance to the class so we can call `.render()` on it later
+    (this as any).postProcessing = postProcessing;
 
     this.worldGroup = new THREE.Group();
     this.scene.add(this.worldGroup);
@@ -110,7 +113,9 @@ export class SceneManager {
     this.boundResize = this.resize.bind(this);
 
     window.addEventListener('resize', this.boundResize);
-    this.animate();
+    this.renderer.init().then(() => {
+      this.renderer.setAnimationLoop(this.boundAnimate);
+    });
   }
 
   resize(): void {
@@ -123,8 +128,6 @@ export class SceneManager {
     this.camera.updateProjectionMatrix();
 
     this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
-    this.composer.setSize(this.container.clientWidth, this.container.clientHeight);
-    if (this.ssaoPass) this.ssaoPass.setSize(this.container.clientWidth, this.container.clientHeight);
   }
 
   registerUpdatable(updatable: Updatable): void {
@@ -187,20 +190,22 @@ export class SceneManager {
     }
   }
 
-  render(): void {
-    this.composer.render();
+  async render(): Promise<void> {
+    const pp = (this as any).postProcessing;
+    if (pp) {
+      await pp.renderAsync();
+    } else {
+      await this.renderer.renderAsync(this.scene, this.camera);
+    }
   }
 
-  private animate(): void {
-    this.animationFrameId = requestAnimationFrame(this.boundAnimate);
+  animate(): void {
     this.update();
     this.render();
   }
 
   dispose(): void {
-    if (this.animationFrameId !== null) {
-      cancelAnimationFrame(this.animationFrameId);
-    }
+    this.renderer.setAnimationLoop(null);
     window.removeEventListener('resize', this.boundResize);
     this.cameraControls.dispose();
     if (this.renderer.domElement.parentNode) {
