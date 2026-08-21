@@ -16,7 +16,7 @@ export class SceneManager {
   renderer: THREE.WebGLRenderer;
   composer: EffectComposer;
   worldGroup: THREE.Group;
-  clock: THREE.Clock;
+  clock: THREE.Timer;
   
   cameraControls: IsometricCamera;
   private updatables: Set<Updatable> = new Set();
@@ -85,7 +85,7 @@ export class SceneManager {
     this.worldGroup = new THREE.Group();
     this.scene.add(this.worldGroup);
 
-    this.clock = new THREE.Clock();
+    this.clock = new THREE.Timer();
 
     this.cameraControls = new IsometricCamera(this.camera, this.renderer.domElement);
     this.cameraControls.enableDrag();
@@ -119,8 +119,9 @@ export class SceneManager {
   }
 
   update(): void {
+    this.clock.update();
     const delta = this.clock.getDelta();
-    const time = this.clock.getElapsedTime();
+    const time = this.clock.getElapsed();
     this.cameraControls.update(delta);
     for (const u of this.updatables) {
       u.update(delta, time);
