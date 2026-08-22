@@ -55,6 +55,9 @@ export function ThreeShipyardCanvas({
     manager.worldGroup.add(decor);
 
     const { group: shipyard, updatable: shipyardUpdatable } = buildShipyard();
+    const width = shipyardZeroLayout.width * 2; // CELL_SIZE is 2
+    const depth = shipyardZeroLayout.height * 2;
+    shipyard.position.set(-width / 2 + 1, 0, -depth / 2 + 1);
     manager.worldGroup.add(shipyard);
     if (shipyardUpdatable) {
       manager.registerUpdatable(shipyardUpdatable);
