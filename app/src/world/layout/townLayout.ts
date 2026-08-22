@@ -67,9 +67,9 @@ export const shipyardZeroLayout: TownLayout = {
   bridges: [{ grid: point(2, 12), axis: "x" }],
   decor: [
     // Trees along the river
-    { kind: "tree", grid: point(1, 4) }, { kind: "tree", grid: point(1, 10) },
+    { kind: "tree", grid: point(1, 4) },
     { kind: "tree", grid: point(1, 16) }, { kind: "tree", grid: point(1, 20) },
-    { kind: "tree", grid: point(3, 4) }, { kind: "tree", grid: point(3, 10) },
+    { kind: "tree", grid: point(3, 4) },
     { kind: "tree", grid: point(3, 16) }, { kind: "tree", grid: point(3, 20) },
     // Trees in Nexus plaza
     { kind: "tree", grid: point(14, 4) }, { kind: "tree", grid: point(14, 6) },

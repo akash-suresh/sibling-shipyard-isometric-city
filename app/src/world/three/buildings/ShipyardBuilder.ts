@@ -211,7 +211,7 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
 
   monumentGroup.scale.set(0.9, 0.9, 0.9);
   const plazaCenterX = 2.5 * CELL_SIZE;
-  const plazaCenterZ = 6 * CELL_SIZE;
+  const plazaCenterZ = 5 * CELL_SIZE; // Moved slightly north (was 6)
   monumentGroup.position.set(plazaCenterX, 0, plazaCenterZ);
   group.add(monumentGroup);
 
