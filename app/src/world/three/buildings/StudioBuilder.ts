@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { MeshStandardNodeMaterial } from 'three/webgpu';
-import { color, mx_noise_float, mx_fractal_noise_float, positionWorld, vec3, mix, float, step, fract, positionLocal } from 'three/tsl';
+import { color, mx_noise_float, mx_fractal_noise_float, positionWorld, vec3, mix, float, step, fract, positionLocal, smoothstep } from 'three/tsl';
 import type { Updatable } from '../SceneManager';
 import { visualTokens } from '../../../design/visualTokens';
 import { createTowerCrane, createExcavator, createChainlinkFence, createFoundationPit, createDumpTruck, createMaterialStacks } from './constructionProps';
@@ -19,7 +19,7 @@ function tagReveal(obj: THREE.Object3D, start: number, end: number) {
   obj.userData.revealStart = start;
   obj.userData.revealEnd = end;
   obj.userData.baseScale = obj.scale.clone();
-  obj.scale.set(0, 0, 0); // Initially hidden
+  obj.scale.set(0, 0, 0);
 }
 
 function tagTempProp(obj: THREE.Object3D, start: number, end: number) {
@@ -27,7 +27,7 @@ function tagTempProp(obj: THREE.Object3D, start: number, end: number) {
   obj.userData.revealStart = start;
   obj.userData.revealEnd = end;
   obj.userData.baseScale = obj.scale.clone();
-  obj.scale.set(0, 0, 0); // Initially hidden
+  obj.scale.set(0, 0, 0);
 }
 
 export function buildStudio(config: {
@@ -40,56 +40,50 @@ export function buildStudio(config: {
   const group = new THREE.Group();
   const p = visualTokens.palette;
 
-  // --- TSL Materials ---
-  const glassMat = new MeshStandardNodeMaterial({ transparent: true, opacity: 0.7, flatShading: true });
-  const gridX = step(0.05, fract(positionLocal.x.mul(2.0)));
-  const gridY = step(0.05, fract(positionLocal.y.mul(2.0)));
-  const gridZ = step(0.05, fract(positionLocal.z.mul(2.0)));
-  const isWindow = gridX.mul(gridY).mul(gridZ);
-  glassMat.colorNode = mix(color(0x112244), color(0x55aaff), isWindow.mul(0.6));
-  glassMat.emissiveNode = mix(color(0x000000), color(0x55aaff).mul(0.3), isWindow);
-  glassMat.roughnessNode = float(0.1);
-  glassMat.metalnessNode = float(0.9);
+  // --- DISTINCTIVE TSL MATERIALS FOR STUDIO ---
+  // 1. Dark Charcoal Brick (Ground Floor)
+  const brickMat = new MeshStandardNodeMaterial({ flatShading: true });
+  const dBase = color(0x222224);
+  const dNoise = mx_fractal_noise_float(positionWorld.mul(3.0), 3);
+  brickMat.colorNode = mix(dBase, color(0x1a1a1c), dNoise.mul(0.6));
+  brickMat.roughnessNode = float(0.9);
 
-  const solidMat = new MeshStandardNodeMaterial({ flatShading: true }); // White tech walls
-  const wBase = color(0xf5f5f5);
-  const wNoise = mx_noise_float(positionWorld.mul(1.5));
-  solidMat.colorNode = mix(wBase, color(0xdddddd), wNoise.mul(0.2));
-  solidMat.roughnessNode = float(0.7);
+  // 2. Rich Timber / Terracotta Cladding (Cantilevered Top Floor)
+  const timberMat = new MeshStandardNodeMaterial({ flatShading: true });
+  const tBase = color(0x8a4b38); // Warm reddish brown
+  const tStripe = mx_noise_float(vec3(positionWorld.x.mul(10.0), positionWorld.y.mul(0.5), positionWorld.z.mul(10.0)));
+  timberMat.colorNode = mix(tBase, color(0x6b3626), tStripe.mul(0.4));
+  timberMat.roughnessNode = float(0.7);
 
-  const accentColor = parseInt(config.accent.replace('#', '0x'), 16) || p.nexus;
+  // 3. Warm Glowing Studio Glass (Unlike the cold blue tower glass)
+  const glassMat = new MeshStandardNodeMaterial({ transparent: true, opacity: 0.8, flatShading: true });
+  const gBase = color(0x332211);
+  const gGlow = color(0xffcc88);
+  const isWindow = step(0.1, fract(positionLocal.x.mul(1.5))).mul(step(0.1, fract(positionLocal.y.mul(1.5))));
+  glassMat.colorNode = mix(gBase, gGlow, isWindow.mul(0.7));
+  glassMat.emissiveNode = mix(color(0x000000), color(0xffaa44).mul(0.6), isWindow);
+  glassMat.roughnessNode = float(0.15);
+  glassMat.metalnessNode = float(0.8);
+
+  // 4. Accent Metal (For frames and beams)
+  const accentColor = parseInt(config.accent.replace('#', '0x'), 16) || 0xdd4433;
   const accentMat = new MeshStandardNodeMaterial({ flatShading: true });
   accentMat.colorNode = color(accentColor);
-  accentMat.roughnessNode = float(0.3);
-
-  const roofMat = new MeshStandardNodeMaterial({ flatShading: true });
-  roofMat.colorNode = color(0x666666);
-  roofMat.roughnessNode = float(0.9);
-
-  const steelMat = new MeshStandardNodeMaterial({ flatShading: true });
-  const sBase = color(0x333333);
-  const sNoise = mx_noise_float(positionWorld.mul(2.5));
-  steelMat.colorNode = mix(sBase, color(0x111111), sNoise.mul(0.5));
-  steelMat.roughnessNode = float(0.4);
-  steelMat.metalnessNode = float(0.8);
-
-  const woodMat = new MeshStandardNodeMaterial({ flatShading: true });
-  woodMat.colorNode = color(0x8b5a2b);
-  woodMat.roughnessNode = float(0.8);
-
-  const hvacMat = new MeshStandardNodeMaterial({ flatShading: true });
-  hvacMat.colorNode = color(0xaaaaaa);
-  hvacMat.roughnessNode = float(0.6);
-  hvacMat.metalnessNode = float(0.5);
+  accentMat.roughnessNode = float(0.4);
+  accentMat.metalnessNode = float(0.6);
+  
+  // 5. Green Roof foliage
+  const grassMat = new MeshStandardNodeMaterial({ flatShading: true });
+  grassMat.colorNode = mix(color(0x3a5a2a), color(0x2d4c1e), mx_noise_float(positionWorld.mul(4.0)));
+  grassMat.roughnessNode = float(0.9);
 
   const rotatingElements: THREE.Object3D[] = [];
   const animatableProps: THREE.Object3D[] = [];
 
   const width = 8;
   const depth = 8;
-  const floorHeight = 3;
 
-  // --- STAGE 0.0 - 0.2: FOUNDATION & PIT ---
+  // --- STAGE 0.0 - 0.2: FOUNDATION & CONSTRUCTION SITE ---
   const constructionGroup = new THREE.Group();
   
   const pit = createFoundationPit(width + 0.5, depth + 0.5);
@@ -101,145 +95,152 @@ export function buildStudio(config: {
   constructionGroup.add(fence);
 
   const excavator = createExcavator();
-  excavator.position.set(-width / 2 + 1, 0, -depth / 2 + 1);
-  tagTempProp(excavator, 0.05, 0.3);
+  excavator.position.set(-width / 2 + 1, 0, depth / 2 + 0.5);
+  tagTempProp(excavator, 0.05, 0.4);
   constructionGroup.add(excavator);
   
   const truck = createDumpTruck();
-  truck.position.set(width / 2 - 1, 0.1, depth / 2 + 2);
+  truck.position.set(width / 2 - 1, 0.1, depth / 2 + 1.5);
   tagTempProp(truck, 0.1, 0.6);
   constructionGroup.add(truck);
   
   const stacks = createMaterialStacks();
-  stacks.position.set(-width / 2 - 1, 0, depth / 2 - 1);
+  stacks.position.set(-width / 2 - 1, 0, -depth / 2 + 1);
   tagTempProp(stacks, 0.0, 0.75);
   constructionGroup.add(stacks);
 
-  const craneData = createTowerCrane(10.0);
+  // Smaller crane for a 2-story building
+  const craneData = createTowerCrane(7.0);
   const crane = craneData.group;
   crane.position.set(width / 2 + 1, 0, -depth / 2 - 1);
-  tagTempProp(crane, 0.15, 0.8);
+  tagTempProp(crane, 0.15, 0.85);
   constructionGroup.add(crane);
   
   group.add(constructionGroup);
 
-  const foundation = new THREE.Mesh(new THREE.BoxGeometry(width, 0.2, depth), solidMat);
+  // Base Pad
+  const foundation = new THREE.Mesh(new THREE.BoxGeometry(width - 0.5, 0.2, depth - 0.5), brickMat);
   foundation.position.y = 0.1;
   tagReveal(foundation, 0.1, 0.2);
   group.add(foundation);
 
-  // --- STAGE 0.2 - 0.5: SKELETON ---
-  const skeletonGroup = new THREE.Group();
-  for (let y = 0; y < 2; y++) {
-    for (let x = -width/2 + 0.2; x <= width/2; x += 2) {
-      for (let z = -depth/2 + 0.2; z <= depth/2; z += 2) {
-        if (y === 1 && (x > 0 && z > 0)) continue; // L-shape cutout
-        
-        const col = new THREE.Mesh(new THREE.BoxGeometry(0.1, floorHeight, 0.1), steelMat);
-        col.position.set(x, 0.2 + y * floorHeight + floorHeight/2, z);
-        tagReveal(col, 0.2 + (y * 0.1) + ((x + z + width) / (width * 4)) * 0.1, 0.35 + (y * 0.1));
-        skeletonGroup.add(col);
-      }
-    }
-  }
-  group.add(skeletonGroup);
-
-  // --- STAGE 0.4 - 0.7: FACADE ---
-  const facadeGroup = new THREE.Group();
+  // --- STAGE 0.2 - 0.5: STRUCTURAL BASE (Ground Floor) ---
+  const groundGroup = new THREE.Group();
   
-  // F1
-  const f1Glass = new THREE.Mesh(new THREE.BoxGeometry(width - 0.2, floorHeight, depth - 0.2), glassMat);
-  f1Glass.position.y = 0.2 + floorHeight/2;
-  tagReveal(f1Glass, 0.4, 0.5);
-  facadeGroup.add(f1Glass);
+  // A recessed dark brick core
+  const coreW = width - 2.5;
+  const coreD = depth - 1.5;
+  const coreH = 2.0;
+  const core = new THREE.Mesh(new THREE.BoxGeometry(coreW, coreH, coreD), brickMat);
+  core.position.set(0, 0.2 + coreH/2, -0.5);
+  core.castShadow = true;
+  tagReveal(core, 0.2, 0.35);
+  groundGroup.add(core);
 
-  const f1Frame = new THREE.Mesh(new THREE.BoxGeometry(width, 0.3, depth), accentMat);
-  f1Frame.position.y = 0.2 + floorHeight;
-  tagReveal(f1Frame, 0.45, 0.55);
-  facadeGroup.add(f1Frame);
+  // Ground floor windows inset into the core
+  const gWindow = new THREE.Mesh(new THREE.BoxGeometry(coreW - 0.5, coreH - 0.5, coreD + 0.1), glassMat);
+  gWindow.position.set(0, 0.2 + coreH/2, -0.5);
+  tagReveal(gWindow, 0.3, 0.45);
+  groundGroup.add(gWindow);
 
-  const interiorFloor = new THREE.Mesh(new THREE.BoxGeometry(width - 0.5, 0.1, depth - 0.5), solidMat);
-  interiorFloor.position.y = 0.2 + floorHeight;
-  tagReveal(interiorFloor, 0.45, 0.55);
-  facadeGroup.add(interiorFloor);
+  // Pillars to support the cantilever
+  const p1 = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, coreH), accentMat);
+  p1.position.set(-width/2 + 0.8, 0.2 + coreH/2, depth/2 - 0.8);
+  tagReveal(p1, 0.3, 0.4);
+  const p2 = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, coreH), accentMat);
+  p2.position.set(width/2 - 0.8, 0.2 + coreH/2, depth/2 - 0.8);
+  tagReveal(p2, 0.3, 0.4);
+  groundGroup.add(p1, p2);
 
-  // F2
-  const f2Glass1 = new THREE.Mesh(new THREE.BoxGeometry(width/2, floorHeight, depth), glassMat);
-  f2Glass1.position.set(-width/4, 0.2 + floorHeight + floorHeight/2, 0);
-  tagReveal(f2Glass1, 0.5, 0.6);
+  group.add(groundGroup);
+
+  // --- STAGE 0.4 - 0.7: CANTILEVER TOP (Studio Space) ---
+  const topGroup = new THREE.Group();
   
-  const f2Glass2 = new THREE.Mesh(new THREE.BoxGeometry(width/2, floorHeight, depth/2), glassMat);
-  f2Glass2.position.set(width/4, 0.2 + floorHeight + floorHeight/2, -depth/4);
-  tagReveal(f2Glass2, 0.55, 0.65);
-  facadeGroup.add(f2Glass1, f2Glass2);
+  const topW = width;
+  const topD = depth;
+  const topH = 2.5;
+  const topY = 0.2 + coreH + topH/2;
 
-  const roof2_1 = new THREE.Mesh(new THREE.BoxGeometry(width/2, 0.2, depth), roofMat);
-  roof2_1.position.set(-width/4, 0.2 + floorHeight * 2, 0);
-  tagReveal(roof2_1, 0.6, 0.7);
+  // The main wooden cladding box, cantilevered forward over the pillars
+  const studioBox = new THREE.Mesh(new THREE.BoxGeometry(topW, topH, topD), timberMat);
+  studioBox.position.set(0, topY, 0);
+  studioBox.castShadow = true;
+  tagReveal(studioBox, 0.4, 0.6);
+  topGroup.add(studioBox);
+
+  // Massive panoramic window at the front
+  const panoWindow = new THREE.Mesh(new THREE.BoxGeometry(topW - 0.4, topH - 0.4, topD + 0.1), glassMat);
+  panoWindow.position.set(0, topY, 0.05); // slight offset to clip through the front
+  tagReveal(panoWindow, 0.5, 0.65);
+  topGroup.add(panoWindow);
+
+  // Angular accent frame wrapping the front window
+  const frameGeo = new THREE.BoxGeometry(topW + 0.2, topH + 0.2, 0.6);
+  const frame = new THREE.Mesh(frameGeo, accentMat);
+  frame.position.set(0, topY, topD/2 - 0.1);
   
-  const roof2_2 = new THREE.Mesh(new THREE.BoxGeometry(width/2, 0.2, depth/2), roofMat);
-  roof2_2.position.set(width/4, 0.2 + floorHeight * 2, -depth/4);
-  tagReveal(roof2_2, 0.6, 0.7);
-  facadeGroup.add(roof2_1, roof2_2);
+  // Carve out the center of the frame (using simple overlapping boxes for a fake boolean look in isometric)
+  const frameInner = new THREE.Mesh(new THREE.BoxGeometry(topW - 0.4, topH - 0.4, 0.8), glassMat);
+  frameInner.position.set(0, topY, topD/2 - 0.1);
+  
+  tagReveal(frame, 0.55, 0.7);
+  topGroup.add(frame);
 
-  const deck = new THREE.Mesh(new THREE.BoxGeometry(width/2, 0.1, depth/2), woodMat);
-  deck.position.set(width/4, 0.2 + floorHeight, depth/4);
-  tagReveal(deck, 0.65, 0.75);
-  facadeGroup.add(deck);
+  group.add(topGroup);
 
-  group.add(facadeGroup);
-
-  // --- STAGE 0.7 - 1.0: DETAILS ---
+  // --- STAGE 0.7 - 1.0: ROOFTOP & DETAILS ---
   const detailsGroup = new THREE.Group();
-  
-  const hvac = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.8, 1.5), hvacMat);
-  hvac.position.set(-2, 0.2 + floorHeight * 2 + 0.4, -2);
-  tagReveal(hvac, 0.7, 0.8);
-  
-  const hvac2 = new THREE.Mesh(new THREE.BoxGeometry(1, 0.8, 1.5), hvacMat);
-  hvac2.position.set(-2, 0.2 + floorHeight * 2 + 0.4, 1);
-  tagReveal(hvac2, 0.75, 0.85);
-  detailsGroup.add(hvac, hvac2);
+  const roofY = 0.2 + coreH + topH;
 
-  const bench = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 0.5), accentMat);
-  bench.position.set(width/4, 0.2 + floorHeight + 0.25, depth/4);
-  tagReveal(bench, 0.8, 0.9);
-  detailsGroup.add(bench);
+  // Sleek white/grey roof suitable for printing a logo
+  const roofBaseMat = new MeshStandardNodeMaterial({ flatShading: true });
+  roofBaseMat.colorNode = color(0xdddddd);
+  roofBaseMat.roughnessNode = float(0.8);
 
+  const roofGeo = new THREE.BoxGeometry(topW - 0.5, 0.1, topD - 0.5);
+  
   if (config.logo) {
     const textureLoader = new THREE.TextureLoader();
     textureLoader.load(config.logo, (texture) => {
-      const aspect = texture.image.width / texture.image.height;
-      const logoW = 3;
-      const logoD = logoW / aspect;
-      const paintedLogo = new THREE.Mesh(
-        new THREE.PlaneGeometry(logoW, logoD),
-        new THREE.MeshStandardMaterial({ map: texture, transparent: true })
-      );
-      paintedLogo.rotation.x = -Math.PI / 2;
-      paintedLogo.position.set(-width/4, 0.2 + floorHeight * 2 + 0.11, 0);
-      tagReveal(paintedLogo, 0.85, 0.95);
-      detailsGroup.add(paintedLogo);
+      // Create a material specifically for the logo roof
+      const logoMat = new THREE.MeshStandardMaterial({ 
+        map: texture, 
+        roughness: 0.8,
+        flatShading: true 
+      });
+      const plainMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.8, flatShading: true });
+      // Use the logo mat on the top face (face index 2 for BoxGeometry usually)
+      const mats = [plainMat, plainMat, logoMat, plainMat, plainMat, plainMat];
+      const flatRoof = new THREE.Mesh(roofGeo, mats);
+      flatRoof.position.set(0, roofY + 0.05, 0);
+      tagReveal(flatRoof, 0.65, 0.75);
+      detailsGroup.add(flatRoof);
     });
+  } else {
+    const flatRoof = new THREE.Mesh(roofGeo, roofBaseMat);
+    flatRoof.position.set(0, roofY + 0.05, 0);
+    tagReveal(flatRoof, 0.65, 0.75);
+    detailsGroup.add(flatRoof);
   }
 
-  // Floating accent sculpture
-  const sculpture = new THREE.Mesh(new THREE.OctahedronGeometry(0.5), accentMat);
-  sculpture.position.set(width/4 + 1, 0.2 + floorHeight + 1.5, depth/4 + 1);
-  tagReveal(sculpture, 0.9, 1.0);
+  // Floating geometric art piece on the ground
+  const sculpture = new THREE.Mesh(new THREE.IcosahedronGeometry(0.4), accentMat);
+  sculpture.position.set(-width/2 + 1.5, 1.0, depth/2 - 1.5);
+  sculpture.castShadow = true;
+  tagReveal(sculpture, 0.85, 0.95);
   detailsGroup.add(sculpture);
   rotatingElements.push(sculpture);
   animatableProps.push(sculpture);
 
   group.add(detailsGroup);
 
-
   // --- ANIMATOR ENGINE ---
   const stageMap: Record<string, number> = {
-    idea: 0.2,       // Foundation & Pit
-    prototype: 0.45, // Skeleton up
-    shipped: 0.75,   // Facade installed
-    landmark: 1.0    // Detailed
+    idea: 0.2,       
+    prototype: 0.45, 
+    shipped: 0.75,   
+    landmark: 1.0    
   };
   
   let targetProgress = stageMap[config.stage] || 0.2;
@@ -292,11 +293,11 @@ export function buildStudio(config: {
       }
 
       rotatingElements.forEach(el => el.rotation.y += delta * 0.5);
-      animatableProps.forEach(el => el.position.y = (0.2 + floorHeight + 1.5) + Math.sin((time || 0) * 2) * 0.1);
+      animatableProps.forEach(el => el.position.y = 1.0 + Math.sin((time || 0) * 2) * 0.1);
     }
   };
 
-  updatable.update(0.01, 0); // initial tick
+  updatable.update(0.01, 0); 
   
   return { group, updatable };
 }

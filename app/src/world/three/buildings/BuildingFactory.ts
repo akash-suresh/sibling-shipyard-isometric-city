@@ -84,13 +84,13 @@ export class BuildingFactory {
         roofSign.scale.setScalar(0);
         result.group.add(roofSign);
       } else if (project.building.archetype === 'studio') {
-        // Skip adding the billboard if a logo is provided; the Studio paints it on its terrace!
         if (!project.logo) {
-          roofSign.position.set(0, 6.0, 0);
+          roofSign.position.set(0, 5.0, 0); // Positioned for a 2-story building
           roofSign.userData = { revealStart: 0.8, revealEnd: 0.9, baseScale: roofSign.scale.clone() };
           roofSign.scale.setScalar(0);
           result.group.add(roofSign);
         }
+        
         // Move ground sign ahead of the footpath, onto the grass
         groundSign.position.set(4.0, 0.6, 7.0);
       } else if (project.building.archetype === 'tower') {
