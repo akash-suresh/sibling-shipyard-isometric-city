@@ -109,11 +109,61 @@ export class TerrainBuilder {
     }
 
     layout.bridges.forEach(bridge => {
+      const bGroup = new THREE.Group();
+      bGroup.position.set(bridge.grid.x * CELL_SIZE, 0, bridge.grid.y * CELL_SIZE);
+      
       const bridgeMesh = new THREE.Mesh(new THREE.BoxGeometry(CELL_SIZE, 0.2, CELL_SIZE), bridgeMat);
-      bridgeMesh.position.set(bridge.grid.x * CELL_SIZE, 0.1, bridge.grid.y * CELL_SIZE);
+      bridgeMesh.position.set(0, 0.1, 0);
       bridgeMesh.castShadow = true;
       bridgeMesh.receiveShadow = true;
-      group.add(bridgeMesh);
+      bGroup.add(bridgeMesh);
+
+      // Victorian Iron side trusses
+      const trussMat = new THREE.MeshStandardMaterial({ color: 0x222225, metalness: 0.8, roughness: 0.5 });
+      const isX = bridge.axis === "x";
+      const length = CELL_SIZE;
+      
+      for (let side of [-1, 1]) {
+        const sideGroup = new THREE.Group();
+        
+        const bRail = new THREE.Mesh(new THREE.BoxGeometry(length, 0.1, 0.1), trussMat);
+        bRail.position.set(0, 0.25, 0);
+        sideGroup.add(bRail);
+        
+        const archShape = new THREE.Shape();
+        archShape.moveTo(-length/2, 0.25);
+        archShape.quadraticCurveTo(0, 1.2, length/2, 0.25);
+        archShape.lineTo(length/2 - 0.1, 0.25);
+        archShape.quadraticCurveTo(0, 1.1, -length/2 + 0.1, 0.25);
+        
+        const archGeo = new THREE.ExtrudeGeometry(archShape, { depth: 0.1, bevelEnabled: false });
+        const archMesh = new THREE.Mesh(archGeo, trussMat);
+        archMesh.position.set(0, 0, -0.05);
+        sideGroup.add(archMesh);
+        
+        // Vertical struts
+        for (let i = -0.8; i <= 0.8; i += 0.4) {
+           // parabola height: h = a*x^2 + k
+           // vertex at (0, 0.95), passing through (1, 0)
+           // 0 = a(1) + 0.95 => a = -0.95
+           // y = -0.95 * x^2 + 0.95
+           const strutH = -0.95 * (i * i) + 0.95; 
+           if (strutH > 0.1) {
+             const strut = new THREE.Mesh(new THREE.BoxGeometry(0.06, strutH, 0.06), trussMat);
+             strut.position.set(i, 0.25 + strutH/2, 0);
+             sideGroup.add(strut);
+           }
+        }
+        
+        if (isX) {
+           sideGroup.position.set(0, 0, side * (CELL_SIZE/2 - 0.1));
+        } else {
+           sideGroup.rotation.y = Math.PI / 2;
+           sideGroup.position.set(side * (CELL_SIZE/2 - 0.1), 0, 0);
+        }
+        bGroup.add(sideGroup);
+      }
+      group.add(bGroup);
     });
 
     // --- DIORAMA CRUST FOUNDATION ---
