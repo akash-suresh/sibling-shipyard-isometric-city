@@ -85,18 +85,18 @@ export class BuildingFactory {
         result.group.add(roofSign);
       } else if (project.building.archetype === 'studio') {
         if (!project.logo) {
-          roofSign.position.set(0, 5.0, 0); // Positioned for a 2-story building
+          roofSign.position.set(4, 5.0, 4); // Centered at 4, 0, 4
           roofSign.userData = { revealStart: 0.8, revealEnd: 0.9, baseScale: roofSign.scale.clone() };
           roofSign.scale.setScalar(0);
           result.group.add(roofSign);
         }
         
-        // Move ground sign ahead of the footpath, onto the grass
-        groundSign.position.set(4.0, 0.6, 7.0);
+        // Move ground sign to the front center
+        groundSign.position.set(4.0, 0.6, 7.5);
       } else if (project.building.archetype === 'tower') {
-        roofSign.position.set(0, 9.5, 0);
-        // Move ground sign further to the front (+Z and +X) into the grass
-        groundSign.position.set(4.5, 0.6, 4.5); 
+        roofSign.position.set(4, 9.5, 4); // Centered at 4, 0, 4
+        // Move ground sign to the front right, away from the building core
+        groundSign.position.set(6.5, 0.6, 7.5); 
         roofSign.userData = { revealStart: 0.9, revealEnd: 1.0, baseScale: roofSign.scale.clone() };
         roofSign.scale.setScalar(0);
         result.group.add(roofSign);
