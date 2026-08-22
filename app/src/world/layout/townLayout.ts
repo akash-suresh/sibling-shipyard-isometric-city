@@ -42,11 +42,11 @@ const point = (x: number, y: number): Point => ({ x, y })
 
 export const shipyardZeroLayout: TownLayout = {
   id: "shipyard-zero",
-  width: 24,
-  height: 24,
+  width: 32,
+  height: 32,
   roads: [
-    ...Array.from({ length: 24 }, (_, index) => point(index, 12)), // Horizontal road
-    ...Array.from({ length: 24 }, (_, index) => point(12, index)).filter(p => p.y !== 12), // Vertical road
+    ...Array.from({ length: 32 }, (_, index) => point(index, 12)), // Horizontal road
+    ...Array.from({ length: 32 }, (_, index) => point(12, index)).filter(p => p.y !== 12), // Vertical road
   ],
   plazas: [
     // Nexus Plaza
@@ -63,14 +63,14 @@ export const shipyardZeroLayout: TownLayout = {
     point(14, 7), point(14, 8), point(14, 9), point(14, 10), point(14, 11),
     point(13, 11) // connect to x=12 road
   ],
-  water: Array.from({ length: 24 }, (_, y) => point(2, y)).filter(({ y }) => y !== 12),
-  bridges: [{ grid: point(2, 12), axis: "x" }],
+  water: Array.from({ length: 32 }, (_, y) => point(8, y)).filter(({ y }) => y !== 12),
+  bridges: [{ grid: point(8, 12), axis: "x" }],
   decor: [
     // Trees along the river
-    { kind: "tree", grid: point(1, 4) },
-    { kind: "tree", grid: point(1, 16) }, { kind: "tree", grid: point(1, 20) },
-    { kind: "tree", grid: point(3, 4) },
-    { kind: "tree", grid: point(3, 16) }, { kind: "tree", grid: point(3, 20) },
+    { kind: "tree", grid: point(7, 4) },
+    { kind: "tree", grid: point(7, 16) }, { kind: "tree", grid: point(7, 20) },
+    { kind: "tree", grid: point(9, 4) },
+    { kind: "tree", grid: point(9, 16) }, { kind: "tree", grid: point(9, 20) },
     // Trees in Nexus plaza
     { kind: "tree", grid: point(14, 4) }, { kind: "tree", grid: point(14, 6) },
     // Street lamps

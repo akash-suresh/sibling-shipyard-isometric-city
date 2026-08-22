@@ -102,10 +102,17 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
   // --- STAGE 0.0 - 0.2: FOUNDATION ---
   const foundationGroup = new THREE.Group();
   
-  const basePlaza = new THREE.Mesh(new THREE.BoxGeometry(20, 0.2, 20), concreteMat);
-  basePlaza.position.set(0, 0.1, 0);
-  tagReveal(basePlaza, 0.0, 0.2);
-  foundationGroup.add(basePlaza);
+  const dockL = new THREE.Mesh(new THREE.BoxGeometry(7, 0.2, 20), concreteMat);
+  dockL.position.set(-6.5, 0.1, 0);
+  const dockR = new THREE.Mesh(new THREE.BoxGeometry(7, 0.2, 20), concreteMat);
+  dockR.position.set(6.5, 0.1, 0);
+  const dockB = new THREE.Mesh(new THREE.BoxGeometry(6, 0.2, 12), concreteMat);
+  dockB.position.set(0, 0.1, -4);
+  
+  tagReveal(dockL, 0.0, 0.2);
+  tagReveal(dockR, 0.0, 0.2);
+  tagReveal(dockB, 0.0, 0.2);
+  foundationGroup.add(dockL, dockR, dockB);
 
   const fence = createChainlinkFence(20.5, 20.5);
   tagTempProp(fence, 0.0, 0.8);
@@ -350,17 +357,24 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
       cursorX += (width * 0.7) + tracking;
     }
     wordGroup.position.x = -cursorX / 2;
+    wordGroup.position.y = 7.1;
+    wordGroup.position.z = 6.0;
     signGroup.add(wordGroup);
   });
   
+  // A brick backing for the sign to mount on
+  const signBacking = new THREE.Mesh(new THREE.BoxGeometry(11, 1.6, 0.4), brickMat);
+  signBacking.position.set(0, 7.5, 5.8);
+  signGroup.add(signBacking);
+  
   // Place sign over the main arch
-  signGroup.position.set(0, 6.5, 7.1);
+  signGroup.position.set(0, 0, 0);
   monumentGroup.add(signGroup);
 
   monumentGroup.scale.set(0.8, 0.8, 0.8);
 
   // Position and Orientation
-  const plazaCenterX = -1.0 * CELL_SIZE; // Hangs off the left edge, so the front meets the river at X=4
+  const plazaCenterX = 5.0 * CELL_SIZE; // Sits at world X=10, faces river at X=16
   const plazaCenterZ = 5 * CELL_SIZE;
   monumentGroup.position.set(plazaCenterX, 0, plazaCenterZ);
   
