@@ -58,10 +58,7 @@ export const shipyardZeroLayout: TownLayout = {
     point(24, 10), point(25, 10), point(26, 10),
     point(24, 11), point(25, 11), point(26, 11) // Touches the road at Y=12
   ],
-  paths: [
-    // Footpath to 1% Skunkworks
-    ...Array.from({ length: 16 }, (_, i) => point(6 + i, 18)).filter(p => p.x < 20)
-  ],
+  paths: [],
   water: Array.from({ length: 32 }, (_, y) => point(8, y)).filter(({ y }) => y !== 12),
   bridges: [
     { grid: point(8, 12), axis: "x" }
