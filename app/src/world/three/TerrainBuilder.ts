@@ -114,32 +114,41 @@ export class TerrainBuilder {
       
       const isX = bridge.axis === "x";
       
-      const stoneMat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.9, flatShading: true });
-      const roadMat = new THREE.MeshStandardMaterial({ color: 0x333333, flatShading: true });
+      const brickMat = new THREE.MeshStandardMaterial({ color: 0x7a3e3e, roughness: 0.9, flatShading: true });
+      const roadMat = new THREE.MeshStandardMaterial({ color: 0x555555, flatShading: true });
       const steelMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8, flatShading: true });
 
       for (let side of [-1, 1]) {
-        const towerGroup = new THREE.Group();
+        const bankGroup = new THREE.Group();
         
-        // Stone base pillar (Bank tower)
-        const base = new THREE.Mesh(new THREE.BoxGeometry(0.8, 4.0, 2.4), stoneMat);
-        base.position.set(side * 1.4, 2.0, 0);
-        base.castShadow = true;
-        base.receiveShadow = true;
-        towerGroup.add(base);
+        for (let zSide of [-1, 1]) {
+           const base = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.4, 1.2), brickMat);
+           base.position.set(side * 1.4, 0.2, zSide * 1.4);
+           base.castShadow = true;
+           bankGroup.add(base);
 
-        // Tower cap
-        const cap = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.2, 4), stoneMat);
-        cap.position.set(side * 1.4, 4.6, 0);
-        cap.rotation.y = Math.PI / 4;
-        towerGroup.add(cap);
+           const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.8, 3.8, 0.8), brickMat);
+           pillar.position.set(side * 1.4, 2.3, zSide * 1.4);
+           pillar.castShadow = true;
+           bankGroup.add(pillar);
 
-        // The Bascule (raised road segment)
+           const cap = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1.2, 4), steelMat);
+           cap.position.set(side * 1.4, 4.8, zSide * 1.4);
+           cap.rotation.y = Math.PI / 4;
+           bankGroup.add(cap);
+        }
+
+        const arch = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 2.0), brickMat);
+        arch.position.set(side * 1.4, 3.8, 0);
+        arch.castShadow = true;
+        bankGroup.add(arch);
+
         const basculeGroup = new THREE.Group();
-        basculeGroup.position.set(side * 1.0, 0.2, 0); // Pivot
+        basculeGroup.position.set(side * 1.0, 0.1, 0); 
         
         const deck = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.2, CELL_SIZE), roadMat);
         deck.position.set(side * -0.55, 0, 0);
+        deck.castShadow = true;
         basculeGroup.add(deck);
 
         const railG = new THREE.BoxGeometry(1.1, 0.4, 0.1);
@@ -150,14 +159,13 @@ export class TerrainBuilder {
         cw.position.set(side * 0.3, -0.2, 0);
         basculeGroup.add(cw);
 
-        // Open state (60 degrees up)
-        basculeGroup.rotation.z = side * Math.PI / 3.5; 
-        towerGroup.add(basculeGroup);
+        basculeGroup.rotation.z = side * Math.PI / 3; 
+        bankGroup.add(basculeGroup);
 
         if (!isX) {
-           towerGroup.rotation.y = Math.PI / 2;
+           bankGroup.rotation.y = Math.PI / 2;
         }
-        bGroup.add(towerGroup);
+        bGroup.add(bankGroup);
       }
       group.add(bGroup);
     });
