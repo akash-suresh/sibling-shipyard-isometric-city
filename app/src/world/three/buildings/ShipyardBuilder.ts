@@ -102,12 +102,12 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
   // --- STAGE 0.0 - 0.2: FOUNDATION ---
   const foundationGroup = new THREE.Group();
   
-  const dockL = new THREE.Mesh(new THREE.BoxGeometry(6, 0.2, 22), concreteMat);
-  dockL.position.set(-7, 0.1, 1);
-  const dockR = new THREE.Mesh(new THREE.BoxGeometry(6, 0.2, 22), concreteMat);
-  dockR.position.set(7, 0.1, 1);
-  const dockB = new THREE.Mesh(new THREE.BoxGeometry(8, 0.2, 10), concreteMat);
-  dockB.position.set(0, 0.1, -5);
+  const dockL = new THREE.Mesh(new THREE.BoxGeometry(6.5, 0.2, 22), concreteMat);
+  dockL.position.set(-6.25, 0.1, 1);
+  const dockR = new THREE.Mesh(new THREE.BoxGeometry(6.5, 0.2, 22), concreteMat);
+  dockR.position.set(6.25, 0.1, 1);
+  const dockB = new THREE.Mesh(new THREE.BoxGeometry(9, 0.2, 7.5), concreteMat);
+  dockB.position.set(0, 0.1, -3.75);
   
   tagReveal(dockL, 0.0, 0.2);
   tagReveal(dockR, 0.0, 0.2);
@@ -208,7 +208,7 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
 
   // Slipway Ramp
   const rampGroup = new THREE.Group();
-  const rampGeo = new THREE.PlaneGeometry(8, 10);
+  const rampGeo = new THREE.PlaneGeometry(9, 10);
   rampGeo.rotateX(-Math.PI / 2);
   const ramp = new THREE.Mesh(rampGeo, concreteMat);
   ramp.position.set(0, 0, 0);
@@ -374,12 +374,12 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
   monumentGroup.scale.set(0.8, 0.8, 0.8);
 
   // Position and Orientation
-  const plazaCenterX = 5.0 * CELL_SIZE; // Sits at world X=10, faces river at X=16
-  const plazaCenterZ = 5 * CELL_SIZE;
+  const plazaCenterX = 8.0 * CELL_SIZE; // Sits exactly on the river at X=16
+  const plazaCenterZ = 4.0 * CELL_SIZE;
   monumentGroup.position.set(plazaCenterX, 0, plazaCenterZ);
   
-  // Rotate so the front (slipway) faces East (+X) into the river
-  monumentGroup.rotation.y = Math.PI / 2;
+  // Rotate so the front (slipway) faces South (+Z) straight down the river
+  monumentGroup.rotation.y = 0;
 
   group.add(monumentGroup);
 
