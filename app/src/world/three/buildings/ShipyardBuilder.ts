@@ -201,12 +201,12 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
 
   // Slipway Ramp
   const rampGroup = new THREE.Group();
-  const rampGeo = new THREE.PlaneGeometry(6, 16);
+  const rampGeo = new THREE.PlaneGeometry(6, 10);
   rampGeo.rotateX(-Math.PI / 2);
   const ramp = new THREE.Mesh(rampGeo, concreteMat);
   ramp.position.set(0, 0, 0);
   
-  const railGeo = new THREE.BoxGeometry(0.2, 0.1, 16);
+  const railGeo = new THREE.BoxGeometry(0.2, 0.1, 10);
   const rail1 = new THREE.Mesh(railGeo, steelMat);
   rail1.position.set(-1.5, 0.05, 0);
   const rail2 = new THREE.Mesh(railGeo, steelMat);
@@ -214,7 +214,7 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
   rampGroup.add(ramp, rail1, rail2);
   
   rampGroup.rotation.x = Math.PI / 16; // tilt down
-  rampGroup.position.set(0, -0.5, 5); // start slightly inside, plunge into river
+  rampGroup.position.set(0, -0.5, 3); // start slightly inside, plunge into river
   hangarGroup.add(rampGroup);
 
   tagReveal(hangarGroup, 0.2, 0.5);
@@ -360,12 +360,12 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
   monumentGroup.scale.set(0.8, 0.8, 0.8);
 
   // Position and Orientation
-  const plazaCenterX = 2.5 * CELL_SIZE;
+  const plazaCenterX = -1.0 * CELL_SIZE; // Hangs off the left edge, so the front meets the river at X=4
   const plazaCenterZ = 5 * CELL_SIZE;
   monumentGroup.position.set(plazaCenterX, 0, plazaCenterZ);
   
-  // Rotate so the front (slipway) faces West (-X) directly into the river at X=4
-  monumentGroup.rotation.y = -Math.PI / 2;
+  // Rotate so the front (slipway) faces East (+X) into the river
+  monumentGroup.rotation.y = Math.PI / 2;
 
   group.add(monumentGroup);
 
