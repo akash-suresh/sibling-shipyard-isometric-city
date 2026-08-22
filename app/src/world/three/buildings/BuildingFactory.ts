@@ -78,8 +78,8 @@ export class BuildingFactory {
       groundSign.scale.set(0.08, 0.08, 0.08); 
       
       if (project.building.archetype === 'workshop') {
-        roofSign.position.set(0, 4.5, 0);
-        groundSign.position.set(2, 0.6, 3.5);
+        roofSign.position.set(4, 7.5, 2); // Center X=4, high up, slightly back
+        groundSign.position.set(6, 0.6, 7.5); // Bottom right near garage door
         roofSign.userData = { revealStart: 0.8, revealEnd: 0.9, baseScale: roofSign.scale.clone() };
         roofSign.scale.setScalar(0);
         result.group.add(roofSign);

@@ -62,12 +62,12 @@ export function buildWorkshop(config: {
   neonMat.emissiveNode = color(configAccent).mul(2.0);
 
   const darkMetalMat = new MeshStandardNodeMaterial({ flatShading: true });
-  darkMetalMat.colorNode = mix(color(0x2a2a2e), color(0x151518), mx_noise_float(positionWorld.mul(3.0)));
+  darkMetalMat.colorNode = mix(color(0x45454a), color(0x2a2a2e), mx_noise_float(positionWorld.mul(3.0)));
   darkMetalMat.roughnessNode = float(0.4);
   darkMetalMat.metalnessNode = float(0.8);
 
   const wallMat = new MeshStandardNodeMaterial({ flatShading: true });
-  wallMat.colorNode = mix(color(0x3a3a3e), color(0x202024), mx_noise_float(positionWorld.mul(4.0)));
+  wallMat.colorNode = mix(color(0x55555a), color(0x3a3a3e), mx_noise_float(positionWorld.mul(4.0)));
   wallMat.roughnessNode = float(0.7);
 
   const tintedGlassMat = new MeshStandardNodeMaterial({ transparent: true, opacity: 0.7, flatShading: true });
@@ -148,6 +148,10 @@ export function buildWorkshop(config: {
 
   const interiorGroup = new THREE.Group();
   interiorGroup.position.set(0, 0.45, 0); // sit on inner pad
+
+  const interiorLight = new THREE.PointLight(configAccent, 2.0, 15);
+  interiorLight.position.set(0, 2.0, 1.0);
+  interiorGroup.add(interiorLight);
 
   // Glowing prototype orb
   const orb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.8, 1), neonMat);
@@ -307,14 +311,6 @@ export function buildWorkshop(config: {
   const tR = new THREE.Mesh(trimG, neonMat); tR.position.set(3.85, 4.5, 0);
   accentGroup.add(tL, tR);
 
-  loadFont((font) => {
-    const geo = new TextGeometry(config.name, { font, size: 1.5, depth: 0.2, curveSegments: 2, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05 });
-    geo.computeBoundingBox();
-    const mesh = new THREE.Mesh(geo, neonMat);
-    mesh.position.set(- (geo.boundingBox!.max.x - geo.boundingBox!.min.x)/2, 5.5, 2.0);
-    accentGroup.add(mesh);
-  });
-  
   tagReveal(accentGroup, 0.75, 0.95);
   bGroup.add(accentGroup);
 
