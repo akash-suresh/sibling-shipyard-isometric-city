@@ -101,8 +101,8 @@ export class BuildingFactory {
         groundSign.position.set(0, 0.6, 3.5);
       } else if (project.building.archetype === 'tower') {
         roofSign.position.set(0, 13.5, 0); // Need to account for tower's unscaled height
-        // Move ground sign to the front right, away from the building core
-        groundSign.position.set(2.5, 0.6, 3.5); 
+        // Move ground sign to the front right corner of the plaza foundation
+        groundSign.position.set(2.0, 0.6, 2.8); 
         roofSign.userData = { revealStart: 0.9, revealEnd: 1.0, baseScale: roofSign.scale.clone() };
         roofSign.scale.setScalar(0);
         wrapperGroup.add(roofSign);

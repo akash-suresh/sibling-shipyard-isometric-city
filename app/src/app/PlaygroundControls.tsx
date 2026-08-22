@@ -141,13 +141,25 @@ export function PlaygroundControls({ projects, setProjects }: PlaygroundControls
           </div>
           
           <button 
-            style={{ marginTop: '2rem', width: '100%', padding: '0.5rem', background: '#333', color: 'white', borderRadius: '4px' }}
-            onClick={() => {
-              console.log(JSON.stringify(projects, null, 2));
-              alert("Projects JSON logged to console!");
+            style={{ marginTop: '2rem', width: '100%', padding: '0.75rem', background: '#3b82f6', color: 'white', borderRadius: '4px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}
+            onClick={async () => {
+              try {
+                const res = await fetch('/api/save-projects', {
+                  method: 'POST',
+                  body: JSON.stringify(projects)
+                });
+                if (res.ok) {
+                  alert("Projects saved to disk!");
+                } else {
+                  alert("Failed to save projects!");
+                }
+              } catch (e) {
+                console.error(e);
+                alert("Failed to save projects: " + String(e));
+              }
             }}
           >
-            Export JSON to Console
+            Save to Disk
           </button>
         </>
       )}
