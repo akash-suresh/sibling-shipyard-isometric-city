@@ -5,7 +5,7 @@
     "summary": "The central hub for all coaching services.",
     "stage": "shipped",
     "status": "live",
-    "grid": { "x": 26, "y": 6 },
+    "grid": { "x": 22, "y": 6 },
     "building": {
       "archetype": "tower",
       "accent": "#4a6fa5"

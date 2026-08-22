@@ -323,16 +323,6 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
   tagTempProp(crane, 0.15, 0.85);
   monumentGroup.add(crane);
 
-  const dockCrane1 = createTowerCrane(5.0).group;
-  dockCrane1.position.set(12, 0, 10);
-  tagReveal(dockCrane1, 0.6, 0.8);
-  detailsGroup.add(dockCrane1);
-
-  const dockCrane2 = createTowerCrane(5.0).group;
-  dockCrane2.position.set(-12, 0, 10);
-  tagReveal(dockCrane2, 0.65, 0.85);
-  detailsGroup.add(dockCrane2);
-
   const stacks = createMaterialStacks();
   stacks.position.set(7, 0, 3);
   tagReveal(stacks, 0.7, 0.9);
