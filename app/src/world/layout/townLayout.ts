@@ -56,7 +56,7 @@ export const shipyardZeroLayout: TownLayout = {
   ],
   paths: [
     // Path to 1% (Orion)
-    ...Array.from({ length: 14 }, (_, i) => point(4, 13 + i)),
+    ...Array.from({ length: 14 }, (_, i) => point(6, 13 + i)),
     // Path to 3 of Spades
     ...Array.from({ length: 6 }, (_, i) => point(19 + i, 24)),
     // Path connecting Coach HQ to road

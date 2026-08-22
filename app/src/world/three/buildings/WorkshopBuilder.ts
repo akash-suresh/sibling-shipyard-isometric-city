@@ -1,13 +1,40 @@
 import * as THREE from 'three';
+import { MeshStandardNodeMaterial } from 'three/webgpu';
+import { color, mx_noise_float, positionWorld, mix, float, uniform, positionLocal, fract, step } from 'three/tsl';
 import type { Updatable } from '../SceneManager';
-import { visualTokens } from '../../../design/visualTokens';
+import { FontLoader, Font } from 'three/examples/jsm/loaders/FontLoader.js';
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
+import { CELL_SIZE } from '../TerrainBuilder';
+
+let cachedFont: Font | null = null;
+const loader = new FontLoader();
+function loadFont(callback: (font: Font) => void) {
+  if (cachedFont) {
+    callback(cachedFont);
+    return;
+  }
+  loader.load('/fonts/helvetiker_bold.typeface.json', (font) => {
+    cachedFont = font;
+    callback(font);
+  });
+}
 
 export interface BuildingResult {
   group: THREE.Group;
-  updatable?: Updatable;  // if the building has animation
+  updatable?: Updatable;
 }
 
-import { createWorker, createExcavator, createTowerCrane, createChainlinkFence, createFoundationPit } from './constructionProps';
+function tagReveal(obj: THREE.Object3D, start: number, end: number) {
+  obj.userData.revealStart = start;
+  obj.userData.revealEnd = end;
+  obj.userData.baseScale = obj.scale.clone();
+  obj.scale.set(0, 0, 0);
+}
+
+function easeOutElastic(x: number): number {
+  const c4 = (2 * Math.PI) / 3;
+  return x === 0 ? 0 : x === 1 ? 1 : Math.pow(2, -10 * x) * Math.sin((x * 10 - 0.75) * c4) + 1;
+}
 
 export function buildWorkshop(config: {
   name: string;
@@ -16,205 +43,193 @@ export function buildWorkshop(config: {
   stage: string;
 }): BuildingResult {
   const group = new THREE.Group();
-  const p = visualTokens.palette;
+  const globalTime = uniform(0);
+
+  // --- TSL Materials ---
+  const configAccent = new THREE.Color(config.accent);
   
-  // Materials
-  const concreteMat = new THREE.MeshStandardMaterial({ color: p.concrete, flatShading: true });
-  const darkConcreteMat = new THREE.MeshStandardMaterial({ color: p.concreteShadow, flatShading: true });
-  const steelMat = new THREE.MeshStandardMaterial({ color: p.metal, flatShading: true });
-  const constructionYellowMat = new THREE.MeshStandardMaterial({ color: p.crane, flatShading: true });
-  const scaffoldOrangeMat = new THREE.MeshStandardMaterial({ color: p.craneShadow, flatShading: true });
-  const windowMat = new THREE.MeshStandardMaterial({ color: p.glass, emissive: 0x445533, emissiveIntensity: 0.8, flatShading: true });
-  windowMat.userData.isWindow = true;
-  const workerMat = new THREE.MeshStandardMaterial({ color: 0xCDDC39, flatShading: true }); // hi-vis green/yellow
-  const hatMat = new THREE.MeshStandardMaterial({ color: 0xFFC107, flatShading: true });
-  const woodMat = new THREE.MeshStandardMaterial({ color: p.soil, flatShading: true });
+  const neonMat = new MeshStandardNodeMaterial({ flatShading: true });
+  neonMat.colorNode = color(configAccent);
+  neonMat.emissiveNode = color(configAccent).mul(2.0); // Glowing neon
 
-  const stageIndex = Math.max(0, ["idea", "prototype", "shipped", "landmark"].indexOf(config.stage));
+  const darkMetalMat = new MeshStandardNodeMaterial({ flatShading: true });
+  darkMetalMat.colorNode = mix(color(0x2a2a2e), color(0x151518), mx_noise_float(positionWorld.mul(3.0)));
+  darkMetalMat.roughnessNode = float(0.4);
+  darkMetalMat.metalnessNode = float(0.8);
 
-  const padW = 3.8;
-  const padD = 3.8;
-  if (stageIndex === 0 && config.status === "building") {
-    const pit = createFoundationPit(padW + 0.2, padD + 0.2);
-    group.add(pit);
-  } else {
-    const pad = new THREE.Mesh(new THREE.BoxGeometry(padW, 0.1, padD), concreteMat);
-    pad.position.y = 0.05;
-    pad.receiveShadow = true;
-    group.add(pad);
-  }
+  const tintedGlassMat = new MeshStandardNodeMaterial({ transparent: true, opacity: 0.7, flatShading: true });
+  tintedGlassMat.colorNode = color(0x050510);
+  tintedGlassMat.emissiveNode = mix(color(0x000000), color(configAccent).mul(0.3), step(0.9, fract(positionLocal.y.mul(5.0))));
+  tintedGlassMat.roughnessNode = float(0.1);
+  tintedGlassMat.metalnessNode = float(0.9);
 
-  // 2. Completed lower floors
-  const floorW = 2.4;
-  const floorH = 1.0;
-  const floorD = 2.4;
+  const concreteMat = new MeshStandardNodeMaterial({ flatShading: true });
+  concreteMat.colorNode = mix(color(0x444444), color(0x333333), mx_noise_float(positionWorld.mul(2.0)));
+  concreteMat.roughnessNode = float(0.9);
 
-  if (stageIndex >= 1) {
-    const floor1 = new THREE.Group();
-    floor1.position.y = 0.1; // on top of pad
-    const core = new THREE.Mesh(new THREE.BoxGeometry(floorW, floorH, floorD), concreteMat);
-    core.position.y = floorH / 2;
-    core.castShadow = true;
-    core.receiveShadow = true;
-    floor1.add(core);
+  const steelMat = new MeshStandardNodeMaterial({ flatShading: true });
+  steelMat.colorNode = color(0x666666);
+  steelMat.metalnessNode = float(1.0);
+  steelMat.roughnessNode = float(0.3);
 
-    // Windows
-    for (let i = -0.8; i <= 0.8; i += 0.8) {
-      const winFront = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.05), windowMat);
-      winFront.position.set(i, floorH / 2, floorD / 2 + 0.01);
-      floor1.add(winFront);
-      
-      const winRight = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.7, 0.5), windowMat);
-      winRight.position.set(floorW / 2 + 0.01, floorH / 2, i);
-      floor1.add(winRight);
-    }
-    group.add(floor1);
-  }
+  // --- Architecture ---
+  const bGroup = new THREE.Group();
 
-  // 3. Exposed steel frame upper floor
-  const frameGroup = new THREE.Group();
-  if (stageIndex >= 2) {
-    frameGroup.position.y = 0.1 + floorH; // on top of floor 1
-    group.add(frameGroup);
+  // Foundation
+  const pad = new THREE.Mesh(new THREE.BoxGeometry(8, 0.2, 8), concreteMat);
+  pad.position.y = 0.1;
+  pad.receiveShadow = true;
+  bGroup.add(pad);
 
-    const colPositions = [-1.1, 0, 1.1];
-    for (const x of colPositions) {
-      for (const z of colPositions) {
-        const col = new THREE.Mesh(new THREE.BoxGeometry(0.1, floorH, 0.1), steelMat);
-        col.position.set(x, floorH / 2, z);
-        col.castShadow = true;
-        col.receiveShadow = true;
-        frameGroup.add(col);
-      }
-    }
-    
-    // Beams
-    for (const x of colPositions) {
-      const beam = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 2.4), steelMat);
-      beam.position.set(x, floorH, 0);
-      beam.castShadow = true;
-      beam.receiveShadow = true;
-      frameGroup.add(beam);
-    }
-    for (const z of colPositions) {
-      const beam = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.1, 0.1), steelMat);
-      beam.position.set(0, floorH, z);
-      beam.castShadow = true;
-      beam.receiveShadow = true;
-      frameGroup.add(beam);
-    }
-  }
+  // Left & Right Parapet Walls
+  const wallG = new THREE.BoxGeometry(0.4, 4.4, 7.6);
+  const wL = new THREE.Mesh(wallG, darkMetalMat); wL.position.set(-3.6, 2.3, 0); wL.castShadow = true;
+  const wR = new THREE.Mesh(wallG, darkMetalMat); wR.position.set(3.6, 2.3, 0); wR.castShadow = true;
+  bGroup.add(wL, wR);
 
-  // 4. Scaffolding
-  const scaffoldGroup = new THREE.Group();
-  if (stageIndex >= 3) {
-    frameGroup.add(scaffoldGroup);
-    
-    for (let x = -1.2; x <= 1.2; x += 0.6) {
-      const pipe = new THREE.Mesh(new THREE.BoxGeometry(0.04, floorH + 0.2, 0.04), scaffoldOrangeMat);
-      pipe.position.set(x, floorH / 2, 1.3);
-      pipe.castShadow = true;
-      scaffoldGroup.add(pipe);
-    }
-    for (let y = 0.3; y <= floorH; y += 0.3) {
-      const pipe = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.04, 0.04), scaffoldOrangeMat);
-      pipe.position.set(0, y, 1.3);
-      pipe.castShadow = true;
-      scaffoldGroup.add(pipe);
-    }
-    for (let z = -1.2; z <= 1.2; z += 0.6) {
-      const pipe = new THREE.Mesh(new THREE.BoxGeometry(0.04, floorH + 0.2, 0.04), scaffoldOrangeMat);
-      pipe.position.set(1.3, floorH / 2, z);
-      pipe.castShadow = true;
-      scaffoldGroup.add(pipe);
-    }
-    for (let y = 0.3; y <= floorH; y += 0.3) {
-      const pipe = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 2.5), scaffoldOrangeMat);
-      pipe.position.set(1.3, y, 0);
-      pipe.castShadow = true;
-      scaffoldGroup.add(pipe);
-    }
-  }
+  // Back Wall
+  const wallB = new THREE.Mesh(new THREE.BoxGeometry(6.8, 4.2, 0.4), darkMetalMat);
+  wallB.position.set(0, 2.2, -3.6);
+  wallB.castShadow = true;
+  bGroup.add(wallB);
 
-  // 5. Tower crane
-  let updatable: Updatable | undefined;
-  if (stageIndex >= 2 && config.status === "building") {
-    const crane = createTowerCrane(4.0);
-    // Move to top-right (isometric right) so it is not hidden behind the structure
-    crane.group.position.set(1.5, 0.1, -1.5);
-    group.add(crane.group);
-    updatable = crane.updatable;
-  }
-
-  // 6. Construction equipment
-  if (stageIndex >= 1 && config.status === "building") {
-    const excavator = createExcavator();
-    group.add(excavator);
-  }
-
-  // Pallets & materials
-  for (let i = 0; i < 2; i++) {
-    const pallet = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.3), woodMat);
-    pallet.position.set(-1.2, 0.125, 1.0 - i * 0.5);
-    pallet.castShadow = true;
-    group.add(pallet);
-    
-    if (i === 0) {
-      for(let b = 0; b < 3; b++) {
-         const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.4), steelMat);
-         beam.rotation.x = Math.PI / 2;
-         beam.position.set(-1.2 + (b-1)*0.05, 0.16, 1.0);
-         beam.castShadow = true;
-         group.add(beam);
-      }
-    } else {
-      const bricks = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.25, 0.25), concreteMat);
-      bricks.position.set(-1.2, 0.275, 1.0 - i * 0.5);
-      bricks.castShadow = true;
-      group.add(bricks);
-    }
-  }
-
-
+  // Front Wall (with massive garage opening)
+  const frontShape = new THREE.Shape();
+  frontShape.moveTo(-3.4, 0);
+  frontShape.lineTo(3.4, 0);
+  frontShape.lineTo(3.4, 3.2);
+  frontShape.lineTo(-3.4, 3.2);
+  frontShape.lineTo(-3.4, 0);
   
-  if (stageIndex >= 1 && config.status === "building") {
-    group.add(createWorker(0.4, 1.5, Math.PI));
-    group.add(createWorker(-0.9, 0.5, Math.PI/2));
-    group.add(createWorker(1.2, -0.6, -Math.PI/4));
-  }
+  const garageHole = new THREE.Path();
+  garageHole.moveTo(-2.8, 0);
+  garageHole.lineTo(-2.8, 2.5);
+  garageHole.lineTo(2.8, 2.5);
+  garageHole.lineTo(2.8, 0);
+  garageHole.lineTo(-2.8, 0);
+  frontShape.holes.push(garageHole);
 
-  // 8. Construction fence
-  if (config.status === "building") {
-    const fenceGroup = createChainlinkFence(padW - 0.1, padD - 0.1);
-    fenceGroup.position.y = 0.1;
-    group.add(fenceGroup);
+  const frontG = new THREE.ExtrudeGeometry(frontShape, { depth: 0.4, bevelEnabled: false });
+  const wF = new THREE.Mesh(frontG, darkMetalMat);
+  wF.position.set(0, 0.2, 3.4); 
+  wF.castShadow = true;
+  bGroup.add(wF);
+
+  // Saw-Tooth Roof
+  const roofGroup = new THREE.Group();
+  for(let i=0; i<3; i++) {
+    const zFront = 3.4 - i * 2.266;
+    const zBack = 3.4 - (i+1) * 2.266;
+    const zCenter = (zFront + zBack) / 2;
     
-    // 9. ORION signage
-    const fHeight = 0.3;
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 128;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.fillStyle = config.accent;
-      ctx.fillRect(0, 0, 512, 128);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 80px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(config.name.toUpperCase(), 256, 64);
+    // Solid sloped panel
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(6.8, 0.2, 2.5), darkMetalMat);
+    panel.rotation.x = -Math.atan2(1, 2.266);
+    panel.position.set(0, 3.7, zCenter);
+    panel.castShadow = true;
+    roofGroup.add(panel);
+    
+    // Vertical skylight glass
+    if (i < 2) {
+      const glass = new THREE.Mesh(new THREE.BoxGeometry(6.8, 1.0, 0.1), tintedGlassMat);
+      glass.position.set(0, 3.7, zBack);
+      roofGroup.add(glass);
     }
-    
-    const signTex = new THREE.CanvasTexture(canvas);
-    signTex.colorSpace = THREE.SRGBColorSpace;
-    const signMat = new THREE.MeshStandardMaterial({ map: signTex, flatShading: true });
-    const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.3), signMat);
-    sign.position.set(0, fHeight / 2 + 0.1, (padD - 0.1) / 2 + 0.025);
-    fenceGroup.add(sign);
   }
+  bGroup.add(roofGroup);
 
-  return {
-    group,
-    updatable
+  // Neon Trim
+  const trimG = new THREE.BoxGeometry(0.1, 0.1, 7.6);
+  const tL = new THREE.Mesh(trimG, neonMat); tL.position.set(-3.85, 4.4, 0);
+  const tR = new THREE.Mesh(trimG, neonMat); tR.position.set(3.85, 4.4, 0);
+  bGroup.add(tL, tR);
+
+  // --- Interior High-Tech R&D ---
+  const interiorGroup = new THREE.Group();
+  interiorGroup.position.set(0, 0.2, 0);
+
+  // Glowing Prototype Orb
+  const orb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.8, 1), neonMat);
+  orb.position.set(0, 1.2, 0);
+  interiorGroup.add(orb);
+
+  // Core housing below orb
+  const coreBase = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.8, 0.4, 16), steelMat);
+  coreBase.position.set(0, 0.2, 0);
+  interiorGroup.add(coreBase);
+
+  // Robotic Assembly Arms
+  const armBaseG = new THREE.CylinderGeometry(0.3, 0.4, 0.6);
+  const lowerArmG = new THREE.BoxGeometry(0.2, 1.8, 0.2);
+  const upperArmG = new THREE.BoxGeometry(0.15, 1.2, 0.15);
+
+  const createRoboticArm = (x: number, z: number, rotY: number, angle1: number, angle2: number) => {
+    const arm = new THREE.Group();
+    arm.position.set(x, 0, z);
+    arm.rotation.y = rotY;
+
+    const base = new THREE.Mesh(armBaseG, darkMetalMat);
+    base.position.y = 0.3;
+    arm.add(base);
+
+    const lower = new THREE.Mesh(lowerArmG, steelMat);
+    lower.position.y = 1.0;
+    lower.rotation.x = angle1;
+    arm.add(lower);
+
+    const upper = new THREE.Mesh(upperArmG, neonMat); // Glowing upper arm/laser
+    upper.position.set(0, 1.8, Math.sin(angle1)*0.9);
+    upper.rotation.x = angle2;
+    arm.add(upper);
+
+    return arm;
   };
+
+  interiorGroup.add(createRoboticArm(-2.2, 1, Math.PI/4, Math.PI/6, -Math.PI/3));
+  interiorGroup.add(createRoboticArm(2.2, -1, -Math.PI*0.75, Math.PI/4, -Math.PI/4));
+
+  bGroup.add(interiorGroup);
+
+  // --- Floating Holographic Sign ---
+  const signGroup = new THREE.Group();
+  loadFont((font) => {
+    const geo = new TextGeometry(config.name, { font, size: 1.5, depth: 0.2, curveSegments: 2, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05 });
+    geo.computeBoundingBox();
+    const mesh = new THREE.Mesh(geo, neonMat);
+    mesh.position.set(- (geo.boundingBox!.max.x - geo.boundingBox!.min.x)/2, 5.5, 2.0);
+    signGroup.add(mesh);
+  });
+  bGroup.add(signGroup);
+
+  group.add(bGroup);
+  
+  // Center appropriately 
+  // 1% is at grid x=4, y=26. The layout engine places the pivot at world X=8, Y=52.
+  // The foundation is 8x8 units (4x4 cells). The pivot is at the bottom-left corner of the building.
+  // Wait, `TownLayout` typically passes the grid coordinate as the bottom-left corner of the footprint.
+  // We need to offset the center of the building to `+4` in X and Z.
+  bGroup.position.set(4, 0, 4);
+
+  // --- Animation Engine ---
+  const stageMap: Record<string, number> = { idea: 0.2, prototype: 0.45, shipped: 0.75, landmark: 1.0 };
+  let targetProgress = stageMap[config.stage || 'landmark'] || 0.2;
+  let currentProgress = targetProgress;
+
+  const updatable: Updatable & { setStage?: (stage: string) => void, setProgress?: (p: number) => void } = {
+    setStage: (stage: string) => { targetProgress = stageMap[stage] || 0.2; },
+    setProgress: (progress: number) => { targetProgress = progress; currentProgress = progress; },
+    update: (delta, time) => {
+      globalTime.value = time || 0;
+      
+      // Animate prototype orb hovering
+      orb.position.y = 1.2 + Math.sin((time || 0) * 2.0) * 0.1;
+      orb.rotation.y = (time || 0) * 0.5;
+
+      // Animate neon opacity slightly pulsating
+      neonMat.emissiveNode = color(configAccent).mul(1.5 + Math.sin((time || 0) * 3.0) * 0.5);
+    }
+  };
+
+  updatable.update(0.01, 0);
+  return { group, updatable };
 }
