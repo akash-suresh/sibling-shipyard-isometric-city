@@ -20,7 +20,7 @@
     "summary": "A small live product with a bright pulse.",
     "stage": "shipped",
     "status": "live",
-    "grid": { "x": 24, "y": 24 },
+    "grid": { "x": 22, "y": 18 },
     "building": {
       "archetype": "studio",
       "accent": "#143122"
@@ -35,7 +35,7 @@
     "summary": "An early prototype taking shape on the riverbank.",
     "stage": "prototype",
     "status": "building",
-    "grid": { "x": 4, "y": 26 },
+    "grid": { "x": 6, "y": 26 },
     "building": {
       "archetype": "workshop",
       "accent": "#dd7373"

@@ -45,112 +45,64 @@ export const shipyardZeroLayout: TownLayout = {
   width: 32,
   height: 32,
   roads: [
-    ...Array.from({ length: 32 }, (_, index) => point(index, 12)), // Horizontal road
-    ...Array.from({ length: 32 }, (_, index) => point(18, index)).filter(p => p.y !== 12), // Vertical road
+    ...Array.from({ length: 32 }, (_, index) => point(index, 12)),
+    ...Array.from({ length: 32 }, (_, index) => point(index, 24)),
+    ...Array.from({ length: 32 }, (_, index) => point(18, index)).filter(p => p.y !== 12 && p.y !== 24),
+    ...Array.from({ length: 32 }, (_, index) => point(26, index)).filter(p => p.y !== 12 && p.y !== 24),
   ],
   plazas: [
-    // Coach HQ Plaza
-    point(21, 5), point(22, 5), point(23, 5),
-    point(21, 6), point(22, 6), point(23, 6),
-    point(21, 7), point(22, 7), point(23, 7),
+    point(18, 12), point(26, 12),
+    point(18, 24), point(26, 24)
   ],
-  paths: [
-    // Path to 1% (Orion)
-    ...Array.from({ length: 14 }, (_, i) => point(6, 13 + i)),
-    // Path to 3 of Spades
-    ...Array.from({ length: 6 }, (_, i) => point(19 + i, 24)),
-    // Path connecting Coach HQ to road
-    point(22, 8), point(22, 9), point(22, 10), point(22, 11) // connect to y=12 road
+  paths: [],
+  water: Array.from({ length: 32 }, (_, y) => point(8, y)).filter(({ y }) => y !== 12 && y !== 24),
+  bridges: [
+    { grid: point(8, 12), axis: "x" },
+    { grid: point(8, 24), axis: "x" }
   ],
-  water: Array.from({ length: 32 }, (_, y) => point(8, y)).filter(({ y }) => y !== 12),
-  bridges: [{ grid: point(8, 12), axis: "x" }],
   decor: [
-    // Trees along the river
-    { kind: "tree", grid: point(7, 16) }, { kind: "tree", grid: point(7, 20) },
-    { kind: "tree", grid: point(9, 16) }, { kind: "tree", grid: point(9, 20) },
-    // Trees near Coach HQ
-    { kind: "tree", grid: point(20, 4) }, { kind: "tree", grid: point(20, 6) },
-    // Street lamps
-    { kind: "lamp", grid: point(17, 11) }, { kind: "lamp", grid: point(19, 11) },
-    { kind: "lamp", grid: point(17, 13) }, { kind: "lamp", grid: point(19, 13) },
-    { kind: "lamp", grid: point(6, 11) }, { kind: "lamp", grid: point(22, 11) },
+    { kind: "tree", grid: point(4, 16) }, { kind: "tree", grid: point(5, 17) }, { kind: "tree", grid: point(3, 18) }, { kind: "tree", grid: point(6, 19) }, { kind: "tree", grid: point(4, 20) },
+    { kind: "tree", grid: point(12, 16) }, { kind: "tree", grid: point(13, 17) }, { kind: "tree", grid: point(14, 15) }, { kind: "tree", grid: point(11, 20) },
+    { kind: "tree", grid: point(20, 14) }, { kind: "tree", grid: point(24, 14) }, { kind: "tree", grid: point(20, 22) }, { kind: "tree", grid: point(24, 22) },
+    { kind: "tree", grid: point(28, 4) }, { kind: "tree", grid: point(30, 5) }, { kind: "tree", grid: point(29, 8) }, { kind: "tree", grid: point(28, 10) },
+    { kind: "tree", grid: point(6, 6) }, { kind: "tree", grid: point(10, 6) }, { kind: "tree", grid: point(6, 30) }, { kind: "tree", grid: point(10, 30) }
   ],
   routes: [
-    {
-      id: "walker-1",
-      actor: "person",
-      waypoints: [point(18, 14), point(18, 12), point(12, 12), point(12, 6), point(13, 6)],
-      durationMs: 25000,
-      reducedProgress: 0.1,
-      offset: point(0, 0),
-    },
-    {
-      id: "walker-2",
-      actor: "person",
-      waypoints: [point(24, 24), point(18, 24), point(18, 20)],
-      durationMs: 22000,
-      reducedProgress: 0.3,
-      offset: point(-0.2, 0.2),
-    },
-    {
-      id: "walker-3",
-      actor: "person",
-      waypoints: [point(22, 11), point(22, 8), point(21, 8), point(21, 11)],
-      durationMs: 18000,
-      reducedProgress: 0.8,
-      offset: point(0.2, -0.2),
-    },
     {
       id: "car-1",
       actor: "service-vehicle",
       waypoints: [point(0, 12), point(31, 12)],
-      durationMs: 12000,
+      durationMs: 14000,
       reducedProgress: 0.5,
-      offset: point(0, 0.25), // drive on the right side of the road
+      offset: point(0, 0.25),
       accent: "nexus",
     },
     {
       id: "car-2",
       actor: "service-vehicle",
-      waypoints: [point(31, 12), point(18, 12), point(18, 0)],
+      waypoints: [point(31, 24), point(0, 24)],
       durationMs: 15000,
       reducedProgress: 0.8,
-      offset: point(0, -0.25), // drive on the right side
+      offset: point(0, -0.25),
       accent: "orion",
     },
     {
       id: "car-3",
       actor: "service-vehicle",
-      waypoints: [point(18, 31), point(18, 12), point(0, 12)],
+      waypoints: [point(18, 31), point(18, 0)],
       durationMs: 16000,
       reducedProgress: 0.2,
-      offset: point(0, -0.25), // drive on the right side
+      offset: point(0.25, 0),
       accent: "spark",
     },
     {
       id: "car-4",
       actor: "service-vehicle",
-      waypoints: [point(0, 12), point(18, 12), point(18, 31)],
+      waypoints: [point(26, 0), point(26, 31)],
       durationMs: 14000,
       reducedProgress: 0.6,
-      offset: point(0, 0.25), 
+      offset: point(-0.25, 0),
       accent: "nexus",
-    },
-    {
-      id: "person-2",
-      actor: "person",
-      waypoints: [point(21, 5), point(23, 5), point(23, 7), point(21, 7)],
-      durationMs: 22000,
-      reducedProgress: 0.1,
-      offset: point(0.2, 0.2),
-    },
-    {
-      id: "person-3",
-      actor: "person",
-      waypoints: [point(10, 8), point(12, 8), point(12, 10), point(10, 10)],
-      durationMs: 25000,
-      reducedProgress: 0.5,
-      offset: point(-0.2, -0.2),
     }
   ]
 }
