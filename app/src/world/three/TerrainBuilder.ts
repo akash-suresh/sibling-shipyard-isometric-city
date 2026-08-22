@@ -122,67 +122,67 @@ export class TerrainBuilder {
 
       for (let side of [-1, 1]) {
         const bankGroup = new THREE.Group();
-        const rotAngle = side * -Math.PI / 3.5; // Open angle
+        const rotAngle = 0; // Closed for now so cars can cross
         
-        // Brick abutments on the banks
+        // Brick abutments pushed further back into the banks
         const abutment = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.4, 2.8), brickMat);
-        abutment.position.set(side * 1.6, 0.2, 0);
+        abutment.position.set(side * 2.6, 0.2, 0);
         bankGroup.add(abutment);
 
-        // Vertical Posts (Hameistijlen)
+        // Vertical Posts (Hameistijlen) - Taller and further back
         for (let zSide of [-1, 1]) {
-           const post = new THREE.Mesh(new THREE.BoxGeometry(0.25, 3.2, 0.25), whitePaintMat);
-           post.position.set(side * 1.2, 1.8, zSide * 1.2);
+           const post = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4.2, 0.3), whitePaintMat);
+           post.position.set(side * 2.2, 2.3, zSide * 1.2);
            post.castShadow = true;
            bankGroup.add(post);
            
-           const base = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), whitePaintMat);
-           base.position.set(side * 1.2, 0.4, zSide * 1.2);
+           const base = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.4, 0.5), whitePaintMat);
+           base.position.set(side * 2.2, 0.4, zSide * 1.2);
            bankGroup.add(base);
         }
 
         // Top cross beam
-        const topBeam = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.25, 2.6), whitePaintMat);
-        topBeam.position.set(side * 1.2, 3.3, 0);
+        const topBeam = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 2.6), whitePaintMat);
+        topBeam.position.set(side * 2.2, 4.4, 0);
         bankGroup.add(topBeam);
 
-        // Deck (Val)
+        // Deck (Val) - Much longer to span the extra distance
         const deckGroup = new THREE.Group();
-        deckGroup.position.set(side * 1.0, 0.2, 0); 
+        deckGroup.position.set(side * 2.0, 0.2, 0); // Pivot moved back
 
-        const deck = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.15, CELL_SIZE), roadMat);
-        deck.position.set(side * -0.6, 0, 0); 
+        const deck = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.15, CELL_SIZE), roadMat);
+        deck.position.set(side * -1.05, 0, 0); 
         deck.castShadow = true;
         deckGroup.add(deck);
 
-        const railG = new THREE.BoxGeometry(1.2, 0.2, 0.05);
-        const r1 = new THREE.Mesh(railG, whitePaintMat); r1.position.set(side * -0.6, 0.15, 0.95); deckGroup.add(r1);
-        const r2 = new THREE.Mesh(railG, whitePaintMat); r2.position.set(side * -0.6, 0.15, -0.95); deckGroup.add(r2);
+        const railG = new THREE.BoxGeometry(2.1, 0.2, 0.05);
+        const r1 = new THREE.Mesh(railG, whitePaintMat); r1.position.set(side * -1.05, 0.15, 0.95); deckGroup.add(r1);
+        const r2 = new THREE.Mesh(railG, whitePaintMat); r2.position.set(side * -1.05, 0.15, -0.95); deckGroup.add(r2);
         
         deckGroup.rotation.z = rotAngle;
         bankGroup.add(deckGroup);
 
-        // Balance Mechanism (Balans)
+        // Balance Mechanism (Balans) - Elongated
         const balansGroup = new THREE.Group();
-        balansGroup.position.set(side * 1.2, 3.4, 0); // Pivots on top beam
+        balansGroup.position.set(side * 2.2, 4.55, 0); // Pivots on top beam
         
-        const beamGeo = new THREE.BoxGeometry(2.4, 0.2, 0.15); 
+        const beamGeo = new THREE.BoxGeometry(4.2, 0.2, 0.15); 
         const arm1 = new THREE.Mesh(beamGeo, whitePaintMat);
-        arm1.position.set(side * -0.2, 0, 1.2); 
+        arm1.position.set(0, 0, 1.2); // Centered on the pivot
         balansGroup.add(arm1);
         const arm2 = new THREE.Mesh(beamGeo, whitePaintMat);
-        arm2.position.set(side * -0.2, 0, -1.2);
+        arm2.position.set(0, 0, -1.2);
         balansGroup.add(arm2);
 
         // Counterweight (Ballastkist)
-        const cw = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.6, 2.6), whitePaintMat);
-        cw.position.set(side * 1.0, -0.3, 0); // Heavy box at the back
+        const cw = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.8, 2.6), whitePaintMat);
+        cw.position.set(side * 1.6, -0.4, 0); 
         balansGroup.add(cw);
 
-        // Hangers (connecting front of balans to front of deck)
+        // Hangers
         for (let zSide of [-1, 1]) {
-           const hanger = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 3.2), steelMat);
-           hanger.position.set(side * -1.1, -1.6, zSide * 1.2);
+           const hanger = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 4.35), steelMat);
+           hanger.position.set(side * -2.0, -2.175, zSide * 1.2);
            hanger.rotation.z = -rotAngle; 
            balansGroup.add(hanger);
         }

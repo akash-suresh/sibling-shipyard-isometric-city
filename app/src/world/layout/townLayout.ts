@@ -103,7 +103,7 @@ export const shipyardZeroLayout: TownLayout = {
     {
       id: "car-1",
       actor: "service-vehicle",
-      waypoints: [point(0, 12), point(7, 12), point(0, 12)],
+      waypoints: [point(0, 12), point(31, 12)],
       durationMs: 12000,
       reducedProgress: 0.5,
       offset: point(0, 0.25), // drive on the right side of the road
@@ -121,7 +121,7 @@ export const shipyardZeroLayout: TownLayout = {
     {
       id: "car-3",
       actor: "service-vehicle",
-      waypoints: [point(18, 31), point(18, 12), point(9, 12), point(18, 12)],
+      waypoints: [point(18, 31), point(18, 12), point(0, 12)],
       durationMs: 16000,
       reducedProgress: 0.2,
       offset: point(0, -0.25), // drive on the right side
@@ -130,7 +130,7 @@ export const shipyardZeroLayout: TownLayout = {
     {
       id: "car-4",
       actor: "service-vehicle",
-      waypoints: [point(0, 12), point(7, 12), point(0, 12)],
+      waypoints: [point(0, 12), point(18, 12), point(18, 31)],
       durationMs: 14000,
       reducedProgress: 0.6,
       offset: point(0, 0.25), 
