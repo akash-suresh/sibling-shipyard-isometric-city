@@ -53,7 +53,11 @@ export const shipyardZeroLayout: TownLayout = {
     ...Array.from({ length: 12 }, (_, i) => point(20 + i, 22)).filter(p => p.x !== 20)
   ],
   plazas: [],
-  paths: [],
+  paths: [
+    point(25, 10),
+    point(25, 11),
+    point(21, 17)
+  ],
   water: Array.from({ length: 32 }, (_, y) => point(8, y)).filter(({ y }) => y !== 12),
   bridges: [
     { grid: point(8, 12), axis: "x" }
