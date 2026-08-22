@@ -315,7 +315,6 @@ export function buildWorkshop(config: {
   bGroup.add(accentGroup);
 
   group.add(bGroup);
-  bGroup.position.set(4, 0, 4);
 
   // --- Animation Engine ---
   const stageMap: Record<string, number> = { idea: 0.2, prototype: 0.45, shipped: 0.75, landmark: 1.0 };

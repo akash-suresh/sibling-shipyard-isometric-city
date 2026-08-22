@@ -54,6 +54,11 @@ export class BuildingFactory {
         logo: project.logo // Pass logo for builders to use!
       };
 
+      const wrapperGroup = new THREE.Group();
+      // Center of a 4x4 cell grid area starting at project.grid
+      wrapperGroup.position.set(project.grid.x * CELL_SIZE + 4, 0, project.grid.y * CELL_SIZE + 4);
+      wrapperGroup.userData = { projectId: project.id, projectName: project.name };
+
       if (project.building.archetype === 'workshop') {
         result = buildWorkshop(config);
         result.group.scale.set(0.6, 0.6, 0.6); 
@@ -67,8 +72,7 @@ export class BuildingFactory {
         return;
       }
 
-      result.group.position.set(project.grid.x * CELL_SIZE, 0, project.grid.y * CELL_SIZE);
-      result.group.userData = { projectId: project.id, projectName: project.name };
+      wrapperGroup.add(result.group);
       
       const roofSign = createBuildingSign(project, false);
       roofSign.scale.set(0.18, 0.18, 0.18); // Much bigger roof logo!
@@ -78,44 +82,44 @@ export class BuildingFactory {
       groundSign.scale.set(0.08, 0.08, 0.08); 
       
       if (project.building.archetype === 'workshop') {
-        roofSign.position.set(4, 7.5, 2); // Center X=4, high up, slightly back
-        groundSign.position.set(6, 0.6, 7.5); // Bottom right near garage door
+        roofSign.position.set(0, 7.5, -2); // Relative to wrapper origin
+        groundSign.position.set(2, 0.6, 3.5); 
         roofSign.userData = { revealStart: 0.8, revealEnd: 0.9, baseScale: roofSign.scale.clone() };
         roofSign.scale.setScalar(0);
-        result.group.add(roofSign);
+        wrapperGroup.add(roofSign);
       } else if (project.building.archetype === 'studio') {
         if (!project.logo) {
-          roofSign.position.set(4, 5.0, 4); // Centered at 4, 0, 4
+          roofSign.position.set(0, 5.0, 0); 
           roofSign.userData = { revealStart: 0.8, revealEnd: 0.9, baseScale: roofSign.scale.clone() };
           roofSign.scale.setScalar(0);
-          result.group.add(roofSign);
+          wrapperGroup.add(roofSign);
         }
         
         // Move ground sign to the front center
-        groundSign.position.set(4.0, 0.6, 7.5);
+        groundSign.position.set(0, 0.6, 3.5);
       } else if (project.building.archetype === 'tower') {
-        roofSign.position.set(4, 9.5, 4); // Centered at 4, 0, 4
+        roofSign.position.set(0, 13.5, 0); // Need to account for tower's unscaled height
         // Move ground sign to the front right, away from the building core
-        groundSign.position.set(6.5, 0.6, 7.5); 
+        groundSign.position.set(2.5, 0.6, 3.5); 
         roofSign.userData = { revealStart: 0.9, revealEnd: 1.0, baseScale: roofSign.scale.clone() };
         roofSign.scale.setScalar(0);
-        result.group.add(roofSign);
+        wrapperGroup.add(roofSign);
       }
       
-      result.group.add(groundSign);
+      wrapperGroup.add(groundSign);
 
       const buildingUpdatables: Updatable[] = [];
-      const statusUpdatables = applyStatusEffects(result.group, project.status);
+      const statusUpdatables = applyStatusEffects(wrapperGroup, project.status);
       buildingUpdatables.push(...statusUpdatables);
 
-      const stageUpdatables = applyStageEffects(result.group, project.stage);
+      const stageUpdatables = applyStageEffects(wrapperGroup, project.stage);
       buildingUpdatables.push(...stageUpdatables);
       if (result.updatable) {
         buildingUpdatables.push(result.updatable);
       }
 
       this.cache.set(project.id, {
-        group: result.group,
+        group: wrapperGroup,
         updatables: buildingUpdatables,
         result: result,
         archetype: project.building.archetype

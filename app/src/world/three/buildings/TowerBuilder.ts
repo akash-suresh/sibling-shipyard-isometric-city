@@ -335,9 +335,5 @@ export function buildTower(config: {
     }
   };
 
-  const outerGroup = new THREE.Group();
-  group.position.set(4, 0, 4);
-  outerGroup.add(group);
-
-  return { group: outerGroup, updatable };
+  return { group, updatable };
 }
