@@ -49,19 +49,18 @@ export const shipyardZeroLayout: TownLayout = {
     ...Array.from({ length: 32 }, (_, index) => point(12, index)).filter(p => p.y !== 12), // Vertical road
   ],
   plazas: [
-    // Nexus Plaza
-    point(14, 4), point(15, 4), point(16, 4),
-    point(14, 6), point(15, 6), point(16, 6),
-    point(15, 5), point(16, 5),
+    // Coach HQ Plaza
+    point(25, 5), point(26, 5), point(27, 5),
+    point(25, 6), point(26, 6), point(27, 6),
+    point(25, 7), point(26, 7), point(27, 7),
   ],
   paths: [
     // Path to 1% (Orion)
-    point(4, 13), point(4, 14), point(4, 15), point(4, 16), point(4, 17), point(4, 18), point(4, 19), point(5, 19), point(6, 19),
+    ...Array.from({ length: 14 }, (_, i) => point(4, 13 + i)),
     // Path to 3 of Spades
-    point(13, 19), point(14, 19), point(15, 19), point(16, 19), point(17, 19), point(18, 19), point(19, 19), point(20, 19),
-    // Path connecting Nexus to road
-    point(14, 7), point(14, 8), point(14, 9), point(14, 10), point(14, 11),
-    point(13, 11) // connect to x=12 road
+    ...Array.from({ length: 12 }, (_, i) => point(13 + i, 24)),
+    // Path connecting Coach HQ to road
+    point(26, 8), point(26, 9), point(26, 10), point(26, 11) // connect to y=12 road
   ],
   water: Array.from({ length: 32 }, (_, y) => point(8, y)).filter(({ y }) => y !== 12),
   bridges: [{ grid: point(8, 12), axis: "x" }],
@@ -69,8 +68,8 @@ export const shipyardZeroLayout: TownLayout = {
     // Trees along the river
     { kind: "tree", grid: point(7, 16) }, { kind: "tree", grid: point(7, 20) },
     { kind: "tree", grid: point(9, 16) }, { kind: "tree", grid: point(9, 20) },
-    // Trees in Nexus plaza
-    { kind: "tree", grid: point(14, 4) }, { kind: "tree", grid: point(14, 6) },
+    // Trees near Coach HQ
+    { kind: "tree", grid: point(24, 4) }, { kind: "tree", grid: point(24, 6) },
     // Street lamps
     { kind: "lamp", grid: point(11, 11) }, { kind: "lamp", grid: point(13, 11) },
     { kind: "lamp", grid: point(11, 13) }, { kind: "lamp", grid: point(13, 13) },
@@ -88,7 +87,7 @@ export const shipyardZeroLayout: TownLayout = {
     {
       id: "walker-2",
       actor: "person",
-      waypoints: [point(20, 15), point(20, 12), point(14, 12), point(14, 14)],
+      waypoints: [point(24, 24), point(20, 24), point(16, 24), point(16, 20)],
       durationMs: 22000,
       reducedProgress: 0.3,
       offset: point(-0.2, 0.2),
@@ -96,7 +95,7 @@ export const shipyardZeroLayout: TownLayout = {
     {
       id: "walker-3",
       actor: "person",
-      waypoints: [point(14, 14), point(14, 16), point(16, 16), point(16, 14)],
+      waypoints: [point(26, 11), point(26, 8), point(25, 8), point(25, 11)],
       durationMs: 18000,
       reducedProgress: 0.8,
       offset: point(0.2, -0.2),
@@ -104,7 +103,7 @@ export const shipyardZeroLayout: TownLayout = {
     {
       id: "car-1",
       actor: "service-vehicle",
-      waypoints: [point(0, 12), point(23, 12)],
+      waypoints: [point(0, 12), point(31, 12)],
       durationMs: 12000,
       reducedProgress: 0.5,
       offset: point(0, 0.25), // drive on the right side of the road
@@ -113,7 +112,7 @@ export const shipyardZeroLayout: TownLayout = {
     {
       id: "car-2",
       actor: "service-vehicle",
-      waypoints: [point(23, 12), point(12, 12), point(12, 0)],
+      waypoints: [point(31, 12), point(12, 12), point(12, 0)],
       durationMs: 15000,
       reducedProgress: 0.8,
       offset: point(0, -0.25), // drive on the right side
@@ -122,7 +121,7 @@ export const shipyardZeroLayout: TownLayout = {
     {
       id: "car-3",
       actor: "service-vehicle",
-      waypoints: [point(12, 23), point(12, 12), point(0, 12)],
+      waypoints: [point(12, 31), point(12, 12), point(0, 12)],
       durationMs: 16000,
       reducedProgress: 0.2,
       offset: point(0, -0.25), // drive on the right side
@@ -131,7 +130,7 @@ export const shipyardZeroLayout: TownLayout = {
     {
       id: "car-4",
       actor: "service-vehicle",
-      waypoints: [point(0, 12), point(12, 12), point(12, 23)],
+      waypoints: [point(0, 12), point(12, 12), point(12, 31)],
       durationMs: 14000,
       reducedProgress: 0.6,
       offset: point(0, 0.25), 
@@ -140,7 +139,7 @@ export const shipyardZeroLayout: TownLayout = {
     {
       id: "person-2",
       actor: "person",
-      waypoints: [point(14, 4), point(16, 4), point(16, 6), point(14, 6)],
+      waypoints: [point(25, 5), point(27, 5), point(27, 7), point(25, 7)],
       durationMs: 22000,
       reducedProgress: 0.1,
       offset: point(0.2, 0.2),
