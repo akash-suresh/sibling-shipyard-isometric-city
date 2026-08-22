@@ -63,13 +63,16 @@ export const shipyardZeroLayout: TownLayout = {
     point(14, 7), point(14, 8), point(14, 9), point(14, 10), point(14, 11),
     point(13, 11) // connect to x=12 road
   ],
-  water: Array.from({ length: 32 }, (_, y) => point(8, y)).filter(({ y }) => y !== 12),
+  water: [
+    ...Array.from({ length: 32 }, (_, y) => point(8, y)).filter(({ y }) => y !== 12),
+    // Harbor basin for the shipyard
+    point(6, 4), point(6, 5), point(6, 6),
+    point(7, 4), point(7, 5), point(7, 6),
+  ],
   bridges: [{ grid: point(8, 12), axis: "x" }],
   decor: [
     // Trees along the river
-    { kind: "tree", grid: point(7, 4) },
     { kind: "tree", grid: point(7, 16) }, { kind: "tree", grid: point(7, 20) },
-    { kind: "tree", grid: point(9, 4) },
     { kind: "tree", grid: point(9, 16) }, { kind: "tree", grid: point(9, 20) },
     // Trees in Nexus plaza
     { kind: "tree", grid: point(14, 4) }, { kind: "tree", grid: point(14, 6) },

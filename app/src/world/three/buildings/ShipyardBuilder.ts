@@ -102,12 +102,12 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
   // --- STAGE 0.0 - 0.2: FOUNDATION ---
   const foundationGroup = new THREE.Group();
   
-  const dockL = new THREE.Mesh(new THREE.BoxGeometry(7, 0.2, 20), concreteMat);
-  dockL.position.set(-6.5, 0.1, 0);
-  const dockR = new THREE.Mesh(new THREE.BoxGeometry(7, 0.2, 20), concreteMat);
-  dockR.position.set(6.5, 0.1, 0);
-  const dockB = new THREE.Mesh(new THREE.BoxGeometry(6, 0.2, 12), concreteMat);
-  dockB.position.set(0, 0.1, -4);
+  const dockL = new THREE.Mesh(new THREE.BoxGeometry(6, 0.2, 22), concreteMat);
+  dockL.position.set(-7, 0.1, 1);
+  const dockR = new THREE.Mesh(new THREE.BoxGeometry(6, 0.2, 22), concreteMat);
+  dockR.position.set(7, 0.1, 1);
+  const dockB = new THREE.Mesh(new THREE.BoxGeometry(8, 0.2, 10), concreteMat);
+  dockB.position.set(0, 0.1, -5);
   
   tagReveal(dockL, 0.0, 0.2);
   tagReveal(dockR, 0.0, 0.2);
@@ -208,16 +208,16 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
 
   // Slipway Ramp
   const rampGroup = new THREE.Group();
-  const rampGeo = new THREE.PlaneGeometry(6, 10);
+  const rampGeo = new THREE.PlaneGeometry(8, 10);
   rampGeo.rotateX(-Math.PI / 2);
   const ramp = new THREE.Mesh(rampGeo, concreteMat);
   ramp.position.set(0, 0, 0);
   
   const railGeo = new THREE.BoxGeometry(0.2, 0.1, 10);
   const rail1 = new THREE.Mesh(railGeo, steelMat);
-  rail1.position.set(-1.5, 0.05, 0);
+  rail1.position.set(-2.5, 0.05, 0);
   const rail2 = new THREE.Mesh(railGeo, steelMat);
-  rail2.position.set(1.5, 0.05, 0);
+  rail2.position.set(2.5, 0.05, 0);
   rampGroup.add(ramp, rail1, rail2);
   
   rampGroup.rotation.x = Math.PI / 16; // tilt down
@@ -358,13 +358,13 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
     }
     wordGroup.position.x = -cursorX / 2;
     wordGroup.position.y = 7.1;
-    wordGroup.position.z = 6.0;
+    wordGroup.position.z = 7.8;
     signGroup.add(wordGroup);
   });
   
   // A brick backing for the sign to mount on
   const signBacking = new THREE.Mesh(new THREE.BoxGeometry(11, 1.6, 0.4), brickMat);
-  signBacking.position.set(0, 7.5, 5.8);
+  signBacking.position.set(0, 7.5, 7.6);
   signGroup.add(signBacking);
   
   // Place sign over the main arch
