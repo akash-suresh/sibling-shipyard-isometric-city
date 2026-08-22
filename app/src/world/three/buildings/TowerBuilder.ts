@@ -263,7 +263,7 @@ export function buildTower(config: {
   const stageMap: Record<string, number> = {
     idea: 0.2,       // Foundation & Pit
     prototype: 0.45, // Skeleton up
-    shipped: 0.75,   // Skin up
+    shipped: 1.0,    // Skin up and temp props gone
     landmark: 1.0    // Clutter & Life
   };
   
@@ -335,5 +335,9 @@ export function buildTower(config: {
     }
   };
 
-  return { group, updatable };
+  const outerGroup = new THREE.Group();
+  group.position.set(4, 0, 4);
+  outerGroup.add(group);
+
+  return { group: outerGroup, updatable };
 }

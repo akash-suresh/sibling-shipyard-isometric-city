@@ -59,10 +59,10 @@ export class BuildingFactory {
         result.group.scale.set(0.6, 0.6, 0.6); 
       } else if (project.building.archetype === 'studio') {
         result = buildStudio(config);
-        result.group.scale.set(1.2, 1.2, 1.2);
+        result.group.scale.set(1.0, 1.0, 1.0); // Exactly 8x8 units (4x4 cells)
       } else if (project.building.archetype === 'tower') {
         result = buildTower(config);
-        result.group.scale.set(1.4, 1.4, 1.4); // Made tower 40% bigger!
+        result.group.scale.set(1.333, 1.333, 1.333); // 6x6 * 1.333 = 8x8 units (4x4 cells)
       } else {
         return;
       }

@@ -86,10 +86,23 @@ export class TerrainBuilder {
           roadMesh.position.set(worldX, 0.025, worldZ);
           roadMesh.receiveShadow = true;
           group.add(roadMesh);
+          const hasLeft = roadSet.has(`${x - 1},${y}`);
+          const hasRight = roadSet.has(`${x + 1},${y}`);
+          const hasTop = roadSet.has(`${x},${y - 1}`);
+          const hasBottom = roadSet.has(`${x},${y + 1}`);
+
+          const isHorizontal = (hasLeft || hasRight) && !hasTop && !hasBottom;
+          const isVertical = (hasTop || hasBottom) && !hasLeft && !hasRight;
           
-          const dash = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, CELL_SIZE * 0.4), whiteMat);
-          dash.position.set(worldX, 0.06, worldZ);
-          group.add(dash);
+          if (isHorizontal) {
+            const dash = new THREE.Mesh(new THREE.BoxGeometry(CELL_SIZE * 0.4, 0.02, 0.2), whiteMat);
+            dash.position.set(worldX, 0.06, worldZ);
+            group.add(dash);
+          } else if (isVertical) {
+            const dash = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, CELL_SIZE * 0.4), whiteMat);
+            dash.position.set(worldX, 0.06, worldZ);
+            group.add(dash);
+          }
         }
         
         if (plazaSet.has(key)) {
