@@ -52,12 +52,7 @@ export const shipyardZeroLayout: TownLayout = {
     // A secondary horizontal road branching East
     ...Array.from({ length: 12 }, (_, i) => point(20 + i, 22)).filter(p => p.x !== 20)
   ],
-  plazas: [
-    // Coach HQ Entrance Plaza
-    point(24, 9), point(25, 9), point(26, 9),
-    point(24, 10), point(25, 10), point(26, 10),
-    point(24, 11), point(25, 11), point(26, 11) // Touches the road at Y=12
-  ],
+  plazas: [],
   paths: [],
   water: Array.from({ length: 32 }, (_, y) => point(8, y)).filter(({ y }) => y !== 12),
   bridges: [

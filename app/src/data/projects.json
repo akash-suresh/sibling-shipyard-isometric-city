@@ -5,7 +5,10 @@
     "summary": "The central hub for all coaching services.",
     "stage": "shipped",
     "status": "live",
-    "grid": { "x": 24, "y": 6 },
+    "grid": {
+      "x": 20,
+      "y": 3
+    },
     "building": {
       "archetype": "tower",
       "accent": "#4a6fa5"
@@ -20,7 +23,10 @@
     "summary": "A small live product with a bright pulse.",
     "stage": "shipped",
     "status": "live",
-    "grid": { "x": 22, "y": 16 },
+    "grid": {
+      "x": 22,
+      "y": 16
+    },
     "building": {
       "archetype": "studio",
       "accent": "#143122"
@@ -35,7 +41,10 @@
     "summary": "An early prototype taking shape on the riverbank.",
     "stage": "prototype",
     "status": "building",
-    "grid": { "x": 4, "y": 18 },
+    "grid": {
+      "x": 4,
+      "y": 18
+    },
     "building": {
       "archetype": "workshop",
       "accent": "#dd7373"
