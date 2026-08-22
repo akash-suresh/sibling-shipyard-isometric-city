@@ -76,7 +76,7 @@ export const shipyardZeroLayout: TownLayout = {
     // Street lamps
     { kind: "lamp", grid: point(11, 11) }, { kind: "lamp", grid: point(13, 11) },
     { kind: "lamp", grid: point(11, 13) }, { kind: "lamp", grid: point(13, 13) },
-    { kind: "lamp", grid: point(8, 11) }, { kind: "lamp", grid: point(16, 11) },
+    { kind: "lamp", grid: point(6, 11) }, { kind: "lamp", grid: point(16, 11) },
   ],
   routes: [
     {
@@ -150,7 +150,7 @@ export const shipyardZeroLayout: TownLayout = {
     {
       id: "person-3",
       actor: "person",
-      waypoints: [point(8, 8), point(12, 8), point(12, 10), point(8, 10)],
+      waypoints: [point(10, 8), point(12, 8), point(12, 10), point(10, 10)],
       durationMs: 25000,
       reducedProgress: 0.5,
       offset: point(-0.2, -0.2),
