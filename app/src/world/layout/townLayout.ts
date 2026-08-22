@@ -51,8 +51,10 @@ export const shipyardZeroLayout: TownLayout = {
     ...Array.from({ length: 32 }, (_, index) => point(26, index)).filter(p => p.y !== 12 && p.y !== 24),
   ],
   plazas: [
-    point(18, 12), point(26, 12),
-    point(18, 24), point(26, 24)
+    // Coach HQ Plaza
+    point(21, 5), point(22, 5), point(23, 5),
+    point(21, 6), point(22, 6), point(23, 6),
+    point(21, 7), point(22, 7), point(23, 7),
   ],
   paths: [],
   water: Array.from({ length: 32 }, (_, y) => point(8, y)).filter(({ y }) => y !== 12 && y !== 24),
