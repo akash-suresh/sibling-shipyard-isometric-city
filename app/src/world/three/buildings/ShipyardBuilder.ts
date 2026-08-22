@@ -125,13 +125,13 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
   // 1. Central Hangar
   const hangarGroup = new THREE.Group();
   
-  const hangarWallGeo = new THREE.BoxGeometry(1, 6, 14);
+  const hangarWallGeo = new THREE.BoxGeometry(1, 6, 15.5);
   const leftHWall = new THREE.Mesh(hangarWallGeo, brickMat);
-  leftHWall.position.set(-4.5, 3, -0.5);
+  leftHWall.position.set(-4.5, 3, 0.25);
   leftHWall.castShadow = true;
   
   const rightHWall = new THREE.Mesh(hangarWallGeo, brickMat);
-  rightHWall.position.set(4.5, 3, -0.5);
+  rightHWall.position.set(4.5, 3, 0.25);
   rightHWall.castShadow = true;
   
   hangarGroup.add(leftHWall, rightHWall);
@@ -183,27 +183,9 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
 
   const frontWallGeo = new THREE.ExtrudeGeometry(frontWallShape, { depth: 1.0, bevelEnabled: false });
   const frontWall = new THREE.Mesh(frontWallGeo, brickMat);
-  frontWall.position.set(0, 0, 5.5); 
+  frontWall.position.set(0, 0, 7.0); // Spans 7.0 to 8.0, perfectly flush with roof
   frontWall.castShadow = true;
   hangarGroup.add(frontWall);
-
-  // Concrete Keystone Rims
-  const rimShape = new THREE.Shape();
-  rimShape.absarc(0, 6, 4.4, 0, Math.PI, false);
-  rimShape.lineTo(-4, 6);
-  rimShape.absarc(0, 6, 4.0, Math.PI, 0, true);
-  rimShape.lineTo(4.4, 6);
-  
-  const rimGeo = new THREE.ExtrudeGeometry(rimShape, { depth: 1.2, bevelEnabled: false });
-  const frontRim = new THREE.Mesh(rimGeo, concreteMat);
-  frontRim.position.set(0, 0, 5.4);
-  frontRim.castShadow = true;
-  hangarGroup.add(frontRim);
-
-  const backRim = new THREE.Mesh(rimGeo, concreteMat);
-  backRim.position.set(0, 0, -7.6);
-  backRim.castShadow = true;
-  hangarGroup.add(backRim);
 
   // Barrel Vault Roof
   const roofShape = new THREE.Shape();
@@ -318,11 +300,11 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
   // Wooden Boardwalk and Mooring Bollards alongside the slipway track
   for (let side of [-1, 1]) {
     const bwGroup = new THREE.Group();
-    const plank = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.15, 12), woodMat);
-    plank.position.set(side * 3.5, 0.05, 1);
+    const plank = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.15, 16), woodMat);
+    plank.position.set(side * 3.5, 0.05, 1.5);
     bwGroup.add(plank);
     
-    for (let bz = -4; bz <= 6; bz += 2.5) {
+    for (let bz = -5; bz <= 9; bz += 2) {
       const bollard = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 0.6), steelMat);
       bollard.position.set(side * 2.9, 0.3, bz);
       bwGroup.add(bollard);
@@ -342,12 +324,12 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
   monumentGroup.add(crane);
 
   const dockCrane1 = createTowerCrane(5.0).group;
-  dockCrane1.position.set(10, 0, 8);
+  dockCrane1.position.set(12, 0, 10);
   tagReveal(dockCrane1, 0.6, 0.8);
   detailsGroup.add(dockCrane1);
 
   const dockCrane2 = createTowerCrane(5.0).group;
-  dockCrane2.position.set(-10, 0, 8);
+  dockCrane2.position.set(-12, 0, 10);
   tagReveal(dockCrane2, 0.65, 0.85);
   detailsGroup.add(dockCrane2);
 
@@ -381,7 +363,7 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
     }
     wordGroup.position.x = -cursorX / 2;
     wordGroup.position.y = 7.1;
-    wordGroup.position.z = 8.1; // Forward to clear roof
+    wordGroup.position.z = 8.4; // Flush with backing
     signGroup.add(wordGroup);
 
     // Secondary Nameboard on Right Wing
@@ -391,14 +373,14 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
     smallMesh.position.set(- (smallGeo.boundingBox!.max.x - smallGeo.boundingBox!.min.x)/2, -0.15, 0.1);
     
     const smallBacking = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.6, 0.2), concreteMat);
-    smallBacking.position.set(7, 3, 6.1); // On the right wing's arcade
+    smallBacking.position.set(7, 3.2, 5.9); // Embedded flush into the brick core above arcade
     smallBacking.add(smallMesh);
     detailsGroup.add(smallBacking);
   });
   
   // A wider brick backing for the main sign
   const signBacking = new THREE.Mesh(new THREE.BoxGeometry(13, 1.6, 0.4), brickMat);
-  signBacking.position.set(0, 7.5, 7.9);
+  signBacking.position.set(0, 7.5, 8.2); // Flush with front wall (Z=8.0)
   signGroup.add(signBacking);
   
   signGroup.position.set(0, 0, 0);
