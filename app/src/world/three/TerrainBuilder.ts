@@ -78,6 +78,7 @@ export class TerrainBuilder {
           cellMesh.position.set(worldX, -1, worldZ);
           cellMesh.receiveShadow = true;
           cellMesh.castShadow = true;
+          cellMesh.userData = { isTerrain: true, x, y };
           group.add(cellMesh);
         }
 

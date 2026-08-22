@@ -4,18 +4,22 @@ import { SceneManager } from "./three/SceneManager";
 import { TerrainBuilder } from "./three/TerrainBuilder";
 import { DecorBuilder } from "./three/DecorBuilder";
 import { buildShipyard } from "./three/buildings/ShipyardBuilder";
-import { shipyardZeroLayout } from "./layout/townLayout";
+
 import { BuildingFactory } from "./three/buildings/BuildingFactory";
 import type { ProjectDefinition } from "../data/types";
 import { AmbientLife } from "./three/actors/AmbientLife";
 import { SelectionManager } from "./three/interaction/SelectionManager";
 
+import type { TownLayout } from "./layout/townLayout";
+
 export function ThreeShipyardCanvas({ 
   projects, 
+  layout,
   isNightMode = false,
   globalProgress
 }: { 
   projects: ProjectDefinition[], 
+  layout: TownLayout,
   isNightMode?: boolean,
   globalProgress?: number
 }) {
@@ -38,6 +42,11 @@ export function ThreeShipyardCanvas({
   const buildingsContainerRef = useRef<THREE.Group>(new THREE.Group());
   const buildingUpdatablesRef = useRef<import('./three/SceneManager').Updatable[]>([]);
 
+  const terrainContainerRef = useRef<THREE.Group>(new THREE.Group());
+  const terrainUpdatablesRef = useRef<import('./three/SceneManager').Updatable[]>([]);
+  const decorContainerRef = useRef<THREE.Group>(new THREE.Group());
+  const ambientLifeRef = useRef<AmbientLife | null>(null);
+  
   useEffect(() => {
     if (!hostRef.current) return;
 
@@ -45,48 +54,72 @@ export function ThreeShipyardCanvas({
     sceneManagerRef.current = manager;
     buildingFactoryRef.current = new BuildingFactory();
 
-    const terrainBuilder = new TerrainBuilder(manager.scene);
-    const { group: terrain, updatables: terrainUpdatables } = terrainBuilder.buildFromLayout(shipyardZeroLayout);
-    manager.worldGroup.add(terrain);
-    terrainUpdatables.forEach(u => manager.registerUpdatable(u));
-
-    const decorBuilder = new DecorBuilder(manager.scene);
-    const decor = decorBuilder.placeDecor(shipyardZeroLayout);
-    manager.worldGroup.add(decor);
+    manager.worldGroup.add(terrainContainerRef.current);
+    manager.worldGroup.add(decorContainerRef.current);
+    manager.worldGroup.add(buildingsContainerRef.current);
 
     const { group: shipyard, updatable: shipyardUpdatable } = buildShipyard();
-    const width = shipyardZeroLayout.width * 2; // CELL_SIZE is 2
-    const depth = shipyardZeroLayout.height * 2;
+    const width = 32 * 2; // Hardcoded default for shipyard placement
+    const depth = 32 * 2;
     shipyard.position.set(-width / 2 + 1, 0, -depth / 2 + 1);
     manager.worldGroup.add(shipyard);
     if (shipyardUpdatable) {
       manager.registerUpdatable(shipyardUpdatable);
     }
 
-    manager.worldGroup.add(buildingsContainerRef.current);
-
-    const ambientLife = new AmbientLife(shipyardZeroLayout, manager.worldGroup);
-    manager.registerUpdatable(ambientLife);
-
-    const selectionManager = new SelectionManager(manager.camera, manager.scene, buildingsContainerRef.current, manager.renderer.domElement);
+    const selectionManager = new SelectionManager(manager.camera, manager.scene, buildingsContainerRef.current, manager.renderer.domElement, manager.cameraControls);
     selectionManager.onSelect((id, pos) => {
       setSelectedProjectId(id);
       if (id && pos) {
-        manager.cameraControls.focusOn(pos, 800); // 800ms tween
+        manager.cameraControls.focusOn(pos, 800);
       }
+    });
+    selectionManager.onDragEnd((projectId, elementId, position) => {
+      // Create a custom event to notify PlaygroundControls
+      const event = new CustomEvent('shipyard-drag-end', {
+        detail: { projectId, elementId, position }
+      });
+      window.dispatchEvent(event);
     });
     manager.registerUpdatable(selectionManager);
 
     return () => {
       selectionManager.dispose();
-      ambientLife.dispose();
       manager.unregisterUpdatable(selectionManager);
-      manager.unregisterUpdatable(ambientLife);
-      terrainUpdatables.forEach(u => manager.unregisterUpdatable(u));
       manager.dispose();
       sceneManagerRef.current = null;
     };
   }, []);
+
+  // Update layout (terrain, decor, ambient life)
+  useEffect(() => {
+    const manager = sceneManagerRef.current;
+    if (!manager) return;
+
+    terrainUpdatablesRef.current.forEach(u => manager.unregisterUpdatable(u));
+    if (ambientLifeRef.current) {
+      ambientLifeRef.current.dispose();
+      manager.unregisterUpdatable(ambientLifeRef.current);
+    }
+
+    terrainContainerRef.current.clear();
+    decorContainerRef.current.clear();
+
+    const terrainBuilder = new TerrainBuilder(manager.scene);
+    const { group: terrain, updatables: terrainUpdatables } = terrainBuilder.buildFromLayout(layout);
+    terrainContainerRef.current.add(terrain);
+    terrainUpdatables.forEach(u => manager.registerUpdatable(u));
+    terrainUpdatablesRef.current = terrainUpdatables;
+
+    const decorBuilder = new DecorBuilder(manager.scene);
+    const decor = decorBuilder.placeDecor(layout);
+    decorContainerRef.current.add(decor);
+
+    const ambientLife = new AmbientLife(layout, manager.worldGroup);
+    manager.registerUpdatable(ambientLife);
+    ambientLifeRef.current = ambientLife;
+    
+  }, [layout]);
 
   const buildingFactoryRef = useRef<BuildingFactory>(new BuildingFactory());
 
@@ -97,7 +130,7 @@ export function ThreeShipyardCanvas({
 
     // Build new buildings
     const factory = buildingFactoryRef.current;
-    const { group: buildingsGroup, updatables } = factory.createBuildings(projects, shipyardZeroLayout);
+    const { group: buildingsGroup, updatables } = factory.createBuildings(projects, layout);
     
     // Unregister old updatables and register new ones
     buildingUpdatablesRef.current.forEach(u => manager.unregisterUpdatable(u));
@@ -108,7 +141,7 @@ export function ThreeShipyardCanvas({
     buildingsContainerRef.current.clear();
     buildingsContainerRef.current.add(buildingsGroup);
 
-  }, [projects]);
+  }, [projects, layout]);
 
 
   const selectedProject = selectedProjectId ? projects.find(p => p.id === selectedProjectId) : null;

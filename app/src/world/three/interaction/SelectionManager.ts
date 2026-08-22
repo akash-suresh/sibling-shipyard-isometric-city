@@ -1,5 +1,7 @@
 import * as THREE from 'three';
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import type { Updatable } from '../SceneManager';
+import type { IsometricCamera } from '../IsometricCamera';
 
 export class SelectionManager implements Updatable {
   private raycaster: THREE.Raycaster;
@@ -7,24 +9,40 @@ export class SelectionManager implements Updatable {
   private camera: THREE.Camera;
   private scene: THREE.Scene;
   private domElement: HTMLElement;
-  private buildingsGroup: THREE.Group;
+  private worldGroup: THREE.Group;
+  private cameraControls: any;
+  private transformControl: TransformControls;
   
   private selectedProjectId: string | null = null;
   private selectionRing: THREE.Mesh;
   private currentHoveredGroup: THREE.Group | null = null;
   
   private onSelectCallback?: (projectId: string | null, worldPos: THREE.Vector3 | null) => void;
+  private onDragEndCallback?: (projectId: string, elementId: string, position: THREE.Vector3) => void;
 
-  constructor(camera: THREE.Camera, scene: THREE.Scene, buildingsGroup: THREE.Group, domElement: HTMLElement) {
+  constructor(camera: THREE.Camera, scene: THREE.Scene, worldGroup: THREE.Group, domElement: HTMLElement, cameraControls: any) {
     this.camera = camera;
     this.scene = scene;
-    this.buildingsGroup = buildingsGroup;
+    this.worldGroup = worldGroup;
     this.domElement = domElement;
+    this.cameraControls = cameraControls;
     
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
     
-    // Create selection ring
+    this.transformControl = new TransformControls(camera, domElement);
+    this.transformControl.showY = false;
+    this.transformControl.addEventListener('dragging-changed', (event: any) => {
+      this.cameraControls.enabled = !event.value;
+      if (!event.value && this.transformControl.object) {
+        const obj = this.transformControl.object;
+        if (this.onDragEndCallback && obj.userData.projectId && obj.userData.elementId) {
+          this.onDragEndCallback(obj.userData.projectId, obj.userData.elementId, obj.position.clone());
+        }
+      }
+    });
+    this.scene.add(this.transformControl.getHelper());
+
     const ringGeo = new THREE.TorusGeometry(1.2, 0.1, 8, 32);
     ringGeo.rotateX(Math.PI / 2);
     const ringMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.8 });
@@ -40,6 +58,10 @@ export class SelectionManager implements Updatable {
     this.onSelectCallback = cb;
   }
 
+  public onDragEnd(cb: (projectId: string, elementId: string, position: THREE.Vector3) => void) {
+    this.onDragEndCallback = cb;
+  }
+
   private onPointerMove = (event: PointerEvent) => {
     const rect = this.domElement.getBoundingClientRect();
     this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -47,22 +69,46 @@ export class SelectionManager implements Updatable {
   };
 
   private onClick = (event: MouseEvent) => {
+    if (this.transformControl.dragging) return;
+
     this.raycaster.setFromCamera(this.mouse, this.camera);
-    const intersects = this.raycaster.intersectObjects(this.buildingsGroup.children, true);
+    const intersects = this.raycaster.intersectObjects(this.worldGroup.children, true);
     
     if (intersects.length > 0) {
-      // Find the root building group that has userData.projectId
-      let obj: THREE.Object3D | null = intersects[0].object;
+      // Check if we hit terrain
+      const hit = intersects[0];
+      if (hit.object.userData && hit.object.userData.isTerrain) {
+        // Dispatch terrain click
+        const gridX = Math.round(hit.point.x / 2);
+        const gridY = Math.round(hit.point.z / 2);
+        const cevent = new CustomEvent('shipyard-terrain-click', {
+          detail: { x: gridX, y: gridY }
+        });
+        window.dispatchEvent(cevent);
+      }
+
+      let obj: THREE.Object3D | null = hit.object;
+      let draggableElement: THREE.Object3D | null = null;
       let projectId: string | null = null;
       let buildingGroup: THREE.Object3D | null = null;
       
-      while (obj && obj !== this.buildingsGroup) {
-        if (obj.userData && obj.userData.projectId) {
+      while (obj && obj !== this.worldGroup) {
+        if (obj.userData && obj.userData.draggable && !draggableElement) {
+          draggableElement = obj;
+        }
+        if (obj.userData && obj.userData.projectId && !obj.userData.draggable) {
           projectId = obj.userData.projectId;
           buildingGroup = obj;
           break;
         }
         obj = obj.parent;
+      }
+      
+      if (draggableElement) {
+        this.transformControl.attach(draggableElement);
+        return;
+      } else {
+        this.transformControl.detach();
       }
       
       if (projectId && buildingGroup) {
@@ -82,6 +128,7 @@ export class SelectionManager implements Updatable {
     }
     
     // Clicked elsewhere, clear selection
+    this.transformControl.detach();
     this.selectedProjectId = null;
     this.selectionRing.visible = false;
     if (this.onSelectCallback) {
@@ -99,13 +146,13 @@ export class SelectionManager implements Updatable {
     
     // Handle hover
     this.raycaster.setFromCamera(this.mouse, this.camera);
-    const intersects = this.raycaster.intersectObjects(this.buildingsGroup.children, true);
+    const intersects = this.raycaster.intersectObjects(this.worldGroup.children, true);
     
     let newHoveredGroup: THREE.Group | null = null;
     
     if (intersects.length > 0) {
       let obj: THREE.Object3D | null = intersects[0].object;
-      while (obj && obj !== this.buildingsGroup) {
+      while (obj && obj !== this.worldGroup) {
         if (obj.userData && obj.userData.projectId) {
           newHoveredGroup = obj as THREE.Group;
           break;
@@ -123,7 +170,7 @@ export class SelectionManager implements Updatable {
 
     // Lerp all building scales back to normal (or just leave them)
     // Actually, I'll just remove the scaling behavior, but to reset it I should set scale to 1.
-    this.buildingsGroup.children.forEach(child => {
+    this.worldGroup.children.forEach(child => {
       if (child.userData && child.userData.projectId) {
         child.scale.set(1, 1, 1);
       }
@@ -134,5 +181,8 @@ export class SelectionManager implements Updatable {
     this.domElement.removeEventListener('pointermove', this.onPointerMove);
     this.domElement.removeEventListener('click', this.onClick);
     this.scene.remove(this.selectionRing);
+    this.transformControl.detach();
+    this.transformControl.dispose();
+    this.scene.remove(this.transformControl.getHelper());
   }
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   buildingArchetypes,
   projectStages,
@@ -10,14 +10,18 @@ import type {
   ProjectStage,
   ProjectStatus,
 } from "../data/types";
+import type { TownLayout } from "../world/layout/townLayout";
 
 interface PlaygroundControlsProps {
   projects: ProjectDefinition[];
   setProjects: (projects: ProjectDefinition[]) => void;
+  layout: TownLayout;
+  setLayout: (layout: TownLayout) => void;
 }
 
-export function PlaygroundControls({ projects, setProjects }: PlaygroundControlsProps) {
+export function PlaygroundControls({ projects, setProjects, layout, setLayout }: PlaygroundControlsProps) {
   const [selectedId, setSelectedId] = useState<string>(projects[0]?.id || "");
+  const [isPathBuilderMode, setIsPathBuilderMode] = useState(false);
 
   const selected = projects.find((p) => p.id === selectedId);
 
@@ -30,12 +34,47 @@ export function PlaygroundControls({ projects, setProjects }: PlaygroundControls
             ...updates,
             building: { ...p.building, ...(updates.building || {}) },
             grid: { ...p.grid, ...(updates.grid || {}) },
+            overrides: { ...p.overrides, ...(updates.overrides || {}) },
           };
         }
         return p;
       })
     );
   };
+
+  useEffect(() => {
+    const handleDragEnd = (e: any) => {
+      const { projectId, elementId, position } = e.detail;
+      const project = projects.find(p => p.id === projectId);
+      if (project) {
+        updateProject(projectId, {
+          overrides: {
+            ...project.overrides,
+            [elementId]: { x: position.x, y: position.y, z: position.z }
+          }
+        });
+      }
+    };
+    
+    const handleTerrainClick = (e: any) => {
+      if (!isPathBuilderMode) return;
+      const { x, y } = e.detail;
+      
+      const isPath = layout.paths.find(p => p.x === x && p.y === y);
+      const newPaths = isPath 
+        ? layout.paths.filter(p => p.x !== x || p.y !== y)
+        : [...layout.paths, { x, y }];
+        
+      setLayout({ ...layout, paths: newPaths });
+    };
+
+    window.addEventListener('shipyard-drag-end', handleDragEnd);
+    window.addEventListener('shipyard-terrain-click', handleTerrainClick);
+    return () => {
+      window.removeEventListener('shipyard-drag-end', handleDragEnd);
+      window.removeEventListener('shipyard-terrain-click', handleTerrainClick);
+    };
+  }, [projects, layout, isPathBuilderMode]);
 
   const updateSelected = (updates: Partial<ProjectDefinition>) => {
     if (selected) {
@@ -45,7 +84,15 @@ export function PlaygroundControls({ projects, setProjects }: PlaygroundControls
 
   return (
     <aside className="playground-controls" style={{ zIndex: 10, background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(10px)', padding: '1rem', borderLeft: '1px solid #ccc', position: 'absolute', right: 0, top: 0, bottom: 0, width: '320px', overflowY: 'auto' }}>
-      <h2>City Editor</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h2>City Editor</h2>
+        <button 
+          onClick={() => setIsPathBuilderMode(!isPathBuilderMode)}
+          style={{ background: isPathBuilderMode ? '#3b82f6' : '#eee', color: isPathBuilderMode ? 'white' : 'black', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+        >
+          {isPathBuilderMode ? 'Path Mode: ON' : 'Path Mode: OFF'}
+        </button>
+      </div>
 
       <div className="control-group">
         <h3>Select Project</h3>
@@ -144,18 +191,22 @@ export function PlaygroundControls({ projects, setProjects }: PlaygroundControls
             style={{ marginTop: '2rem', width: '100%', padding: '0.75rem', background: '#3b82f6', color: 'white', borderRadius: '4px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}
             onClick={async () => {
               try {
-                const res = await fetch('/api/save-projects', {
+                const resProjects = await fetch('/api/save-projects', {
                   method: 'POST',
                   body: JSON.stringify(projects)
                 });
-                if (res.ok) {
-                  alert("Projects saved to disk!");
+                const resLayout = await fetch('/api/save-layout', {
+                  method: 'POST',
+                  body: JSON.stringify(layout)
+                });
+                if (resProjects.ok && resLayout.ok) {
+                  alert("Projects and layout saved to disk!");
                 } else {
-                  alert("Failed to save projects!");
+                  alert("Failed to save data!");
                 }
               } catch (e) {
                 console.error(e);
-                alert("Failed to save projects: " + String(e));
+                alert("Failed to save data: " + String(e));
               }
             }}
           >

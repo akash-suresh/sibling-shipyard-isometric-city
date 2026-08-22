@@ -79,20 +79,22 @@ export class BuildingFactory {
       const roofSign = createBuildingSign(project, false);
       roofSign.scale.set(0.18, 0.18, 0.18); // Much bigger roof logo!
       roofSign.rotation.y = Math.PI / 4;
+      roofSign.userData = { ...roofSign.userData, draggable: true, elementId: "roofSign", projectId: project.id };
       
       const groundSign = createBuildingSign(project, true); // Force text on grass
       groundSign.scale.set(0.08, 0.08, 0.08); 
+      groundSign.userData = { draggable: true, elementId: "groundSign", projectId: project.id };
       
       if (project.building.archetype === 'workshop') {
         roofSign.position.set(0, 7.5, -2); // Relative to wrapper origin
         groundSign.position.set(2, 0.6, 3.5); 
-        roofSign.userData = { revealStart: 0.8, revealEnd: 0.9, baseScale: roofSign.scale.clone() };
+        roofSign.userData = { ...roofSign.userData, revealStart: 0.8, revealEnd: 0.9, baseScale: roofSign.scale.clone() };
         roofSign.scale.setScalar(0);
         wrapperGroup.add(roofSign);
       } else if (project.building.archetype === 'studio') {
         if (!project.logo) {
           roofSign.position.set(0, 5.0, 0); 
-          roofSign.userData = { revealStart: 0.8, revealEnd: 0.9, baseScale: roofSign.scale.clone() };
+          roofSign.userData = { ...roofSign.userData, revealStart: 0.8, revealEnd: 0.9, baseScale: roofSign.scale.clone() };
           roofSign.scale.setScalar(0);
           wrapperGroup.add(roofSign);
         }
@@ -103,9 +105,17 @@ export class BuildingFactory {
         roofSign.position.set(0, 13.5, 0); // Need to account for tower's unscaled height
         // Move ground sign to the grass in front
         groundSign.position.set(2.0, 0.6, 3.5); 
-        roofSign.userData = { revealStart: 0.9, revealEnd: 1.0, baseScale: roofSign.scale.clone() };
+        roofSign.userData = { ...roofSign.userData, revealStart: 0.9, revealEnd: 1.0, baseScale: roofSign.scale.clone() };
         roofSign.scale.setScalar(0);
         wrapperGroup.add(roofSign);
+      }
+      
+      // Apply user overrides if they exist
+      if (project.overrides?.groundSign) {
+        groundSign.position.set(project.overrides.groundSign.x, project.overrides.groundSign.y, project.overrides.groundSign.z);
+      }
+      if (project.overrides?.roofSign) {
+        roofSign.position.set(project.overrides.roofSign.x, project.overrides.roofSign.y, project.overrides.roofSign.z);
       }
       
       wrapperGroup.add(groundSign);
