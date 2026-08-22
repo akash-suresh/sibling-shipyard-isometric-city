@@ -249,7 +249,7 @@ export function buildTower(config: {
   
   // Corporate floating sculpture on the plaza
   const sculpture = new THREE.Mesh(new THREE.OctahedronGeometry(0.4), accentMat);
-  sculpture.position.set(-2, 1, 2);
+  sculpture.position.set(-2.5, 1, 2.5); // Push it slightly further out from the core (-2 to 2)
   sculpture.castShadow = true;
   tagReveal(sculpture, 0.9, 1.0);
   lifeGroup.add(sculpture);
