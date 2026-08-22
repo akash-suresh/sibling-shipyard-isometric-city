@@ -28,7 +28,7 @@ export class BuildingFactory {
       // If it exists and hasn't changed archetype, update it!
       if (cached && cached.archetype === project.building.archetype) {
         // Update its position
-        cached.group.position.set(project.grid.x * CELL_SIZE, 0, project.grid.y * CELL_SIZE);
+        cached.group.position.set(project.grid.x * CELL_SIZE + 4, 0, project.grid.y * CELL_SIZE + 4);
         
         // Update its internal stage if it supports it
         if (cached.result.updatable && (cached.result.updatable as any).setStage) {
@@ -53,6 +53,8 @@ export class BuildingFactory {
         stage: project.stage,
         logo: project.logo // Pass logo for builders to use!
       };
+
+      console.log(`Building ${project.id} at ${project.grid.x}, ${project.grid.y}`);
 
       const wrapperGroup = new THREE.Group();
       // Center of a 4x4 cell grid area starting at project.grid
@@ -125,7 +127,7 @@ export class BuildingFactory {
         archetype: project.building.archetype
       });
 
-      group.add(result.group);
+      group.add(wrapperGroup);
       updatables.push(...buildingUpdatables);
       newUpdatables.push(...buildingUpdatables);
     });
