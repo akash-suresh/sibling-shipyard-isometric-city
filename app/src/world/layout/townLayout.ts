@@ -45,29 +45,36 @@ export const shipyardZeroLayout: TownLayout = {
   width: 32,
   height: 32,
   roads: [
-    ...Array.from({ length: 32 }, (_, index) => point(index, 12)),
-    ...Array.from({ length: 32 }, (_, index) => point(index, 24)),
-    ...Array.from({ length: 32 }, (_, index) => point(18, index)).filter(p => p.y !== 12 && p.y !== 24),
-    ...Array.from({ length: 32 }, (_, index) => point(26, index)).filter(p => p.y !== 12 && p.y !== 24),
+    // Main horizontal artery across the whole map
+    ...Array.from({ length: 32 }, (_, i) => point(i, 12)),
+    // A vertical road stemming from the artery and going South
+    ...Array.from({ length: 20 }, (_, i) => point(20, 12 + i)).filter(p => p.y !== 12),
+    // A secondary horizontal road branching East
+    ...Array.from({ length: 12 }, (_, i) => point(20 + i, 22)).filter(p => p.x !== 20)
   ],
   plazas: [
-    // Coach HQ Plaza
-    point(21, 5), point(22, 5), point(23, 5),
-    point(21, 6), point(22, 6), point(23, 6),
-    point(21, 7), point(22, 7), point(23, 7),
+    // Coach HQ Entrance Plaza
+    point(24, 9), point(25, 9), point(26, 9),
+    point(24, 10), point(25, 10), point(26, 10),
+    point(24, 11), point(25, 11), point(26, 11) // Touches the road at Y=12
   ],
-  paths: [],
-  water: Array.from({ length: 32 }, (_, y) => point(8, y)).filter(({ y }) => y !== 12 && y !== 24),
+  paths: [
+    // Footpath to 1% Skunkworks
+    ...Array.from({ length: 16 }, (_, i) => point(6 + i, 18)).filter(p => p.x < 20)
+  ],
+  water: Array.from({ length: 32 }, (_, y) => point(8, y)).filter(({ y }) => y !== 12),
   bridges: [
-    { grid: point(8, 12), axis: "x" },
-    { grid: point(8, 24), axis: "x" }
+    { grid: point(8, 12), axis: "x" }
   ],
   decor: [
-    { kind: "tree", grid: point(4, 16) }, { kind: "tree", grid: point(5, 17) }, { kind: "tree", grid: point(3, 18) }, { kind: "tree", grid: point(6, 19) }, { kind: "tree", grid: point(4, 20) },
-    { kind: "tree", grid: point(12, 16) }, { kind: "tree", grid: point(13, 17) }, { kind: "tree", grid: point(14, 15) }, { kind: "tree", grid: point(11, 20) },
-    { kind: "tree", grid: point(20, 14) }, { kind: "tree", grid: point(24, 14) }, { kind: "tree", grid: point(20, 22) }, { kind: "tree", grid: point(24, 22) },
-    { kind: "tree", grid: point(28, 4) }, { kind: "tree", grid: point(30, 5) }, { kind: "tree", grid: point(29, 8) }, { kind: "tree", grid: point(28, 10) },
-    { kind: "tree", grid: point(6, 6) }, { kind: "tree", grid: point(10, 6) }, { kind: "tree", grid: point(6, 30) }, { kind: "tree", grid: point(10, 30) }
+    { kind: "tree", grid: point(18, 14) }, { kind: "tree", grid: point(18, 16) }, { kind: "tree", grid: point(18, 18) },
+    { kind: "tree", grid: point(22, 14) }, { kind: "tree", grid: point(24, 14) }, { kind: "tree", grid: point(26, 14) },
+    // A nice park in bottom left
+    { kind: "tree", grid: point(10, 20) }, { kind: "tree", grid: point(12, 21) }, { kind: "tree", grid: point(14, 20) },
+    { kind: "tree", grid: point(11, 23) }, { kind: "tree", grid: point(13, 24) }, { kind: "tree", grid: point(15, 23) },
+    // Riverbank trees
+    { kind: "tree", grid: point(6, 6) }, { kind: "tree", grid: point(10, 6) },
+    { kind: "tree", grid: point(6, 30) }, { kind: "tree", grid: point(10, 30) }
   ],
   routes: [
     {
@@ -82,7 +89,7 @@ export const shipyardZeroLayout: TownLayout = {
     {
       id: "car-2",
       actor: "service-vehicle",
-      waypoints: [point(31, 24), point(0, 24)],
+      waypoints: [point(31, 12), point(20, 12), point(20, 31)],
       durationMs: 15000,
       reducedProgress: 0.8,
       offset: point(0, -0.25),
@@ -91,20 +98,19 @@ export const shipyardZeroLayout: TownLayout = {
     {
       id: "car-3",
       actor: "service-vehicle",
-      waypoints: [point(18, 31), point(18, 0)],
-      durationMs: 16000,
+      waypoints: [point(20, 31), point(20, 22), point(31, 22)],
+      durationMs: 12000,
       reducedProgress: 0.2,
-      offset: point(0.25, 0),
+      offset: point(-0.25, 0),
       accent: "spark",
     },
     {
-      id: "car-4",
-      actor: "service-vehicle",
-      waypoints: [point(26, 0), point(26, 31)],
-      durationMs: 14000,
-      reducedProgress: 0.6,
-      offset: point(-0.25, 0),
-      accent: "nexus",
+      id: "drone-1",
+      actor: "person",
+      waypoints: [point(4, 4), point(24, 8), point(16, 20), point(4, 4)],
+      durationMs: 25000,
+      reducedProgress: 0,
+      offset: point(0, 0),
     }
   ]
 }
