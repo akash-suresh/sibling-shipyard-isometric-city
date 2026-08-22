@@ -104,7 +104,7 @@ export const shipyardZeroLayout: TownLayout = {
     {
       id: "drone-1",
       actor: "person",
-      waypoints: [point(4, 4), point(24, 8), point(16, 20), point(4, 4)],
+      waypoints: [point(4, 4), point(24, 4), point(24, 20), point(4, 20), point(4, 4)],
       durationMs: 25000,
       reducedProgress: 0,
       offset: point(0, 0),
