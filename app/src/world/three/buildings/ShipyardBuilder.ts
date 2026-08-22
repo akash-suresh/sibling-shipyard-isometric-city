@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { MeshStandardNodeMaterial } from 'three/webgpu';
-import { color, mx_noise_float, mx_fractal_noise_float, positionWorld, mix, float, uniform, positionLocal, normalLocal, vec3, step, fract } from 'three/tsl';
+import { color, mx_noise_float, mx_fractal_noise_float, positionWorld, mix, float, uniform, positionLocal, fract, step } from 'three/tsl';
 import type { Updatable } from '../SceneManager';
 import { FontLoader, Font } from 'three/examples/jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
@@ -72,7 +72,6 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
   });
   const gBase = color(0x88ccff);
   const gGlow = color(0xffeedd);
-  const glowY = float(1.0);
   const glowPattern = step(0.1, fract(positionLocal.x.mul(3.0))).mul(step(0.1, fract(positionLocal.y.mul(3.0))));
   glassMat.colorNode = mix(gBase, gGlow, glowPattern.mul(0.5));
   glassMat.emissiveNode = mix(color(0x000000), color(0xffaa55).mul(0.8), glowPattern);
@@ -91,29 +90,19 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
   concreteMat.colorNode = mix(color(0x777777), color(0x555555), mx_noise_float(positionWorld.mul(1.5)));
   concreteMat.roughnessNode = float(0.9);
 
-  const smokeMat = new MeshStandardNodeMaterial({ transparent: true, depthWrite: false, flatShading: true });
-  smokeMat.colorNode = color(0xd0d0d0);
-  const smokeNoise = mx_fractal_noise_float(positionWorld.mul(0.8).add(vec3(0, globalTime.mul(-1.5), 0)), 3);
-  smokeMat.opacityNode = mix(float(0.0), float(0.6), smokeNoise);
-  smokeMat.positionNode = positionLocal.add(normalLocal.mul(smokeNoise.mul(0.8)));
+  const woodMat = new MeshStandardNodeMaterial({ flatShading: true });
+  woodMat.colorNode = mix(color(0x6b4c3a), color(0x4a3325), mx_noise_float(positionWorld.mul(2.0)));
+  woodMat.roughnessNode = float(0.9);
+
+  const whitePaintMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff, roughness: 0.9, flatShading: true, emissive: 0xffffff, emissiveIntensity: 0.3
+  });
 
   const monumentGroup = new THREE.Group();
 
   // --- STAGE 0.0 - 0.2: FOUNDATION ---
   const foundationGroup = new THREE.Group();
   
-  const dockL = new THREE.Mesh(new THREE.BoxGeometry(6.5, 0.2, 22), concreteMat);
-  dockL.position.set(-6.25, 0.1, 1);
-  const dockR = new THREE.Mesh(new THREE.BoxGeometry(6.5, 0.2, 22), concreteMat);
-  dockR.position.set(6.25, 0.1, 1);
-  const dockB = new THREE.Mesh(new THREE.BoxGeometry(9, 0.2, 7.5), concreteMat);
-  dockB.position.set(0, 0.1, -3.75);
-  
-  tagReveal(dockL, 0.0, 0.2);
-  tagReveal(dockR, 0.0, 0.2);
-  tagReveal(dockB, 0.0, 0.2);
-  foundationGroup.add(dockL, dockR, dockB);
-
   const fence = createChainlinkFence(20.5, 20.5);
   tagTempProp(fence, 0.0, 0.8);
   foundationGroup.add(fence);
@@ -136,43 +125,47 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
   // 1. Central Hangar
   const hangarGroup = new THREE.Group();
   
-  // Left and Right structural walls of central hangar
   const hangarWallGeo = new THREE.BoxGeometry(1, 6, 14);
   const leftHWall = new THREE.Mesh(hangarWallGeo, brickMat);
-  leftHWall.position.set(-4.5, 3, 0);
+  leftHWall.position.set(-4.5, 3, -0.5);
   leftHWall.castShadow = true;
   
   const rightHWall = new THREE.Mesh(hangarWallGeo, brickMat);
-  rightHWall.position.set(4.5, 3, 0);
+  rightHWall.position.set(4.5, 3, -0.5);
   rightHWall.castShadow = true;
   
   hangarGroup.add(leftHWall, rightHWall);
 
-  // Closed back wall
+  // Back Wall with Arch (allows river to flow through)
   const backWallShape = new THREE.Shape();
-  backWallShape.moveTo(-4, 0);
-  backWallShape.lineTo(4, 0);
-  backWallShape.lineTo(4, 6);
-  backWallShape.absarc(0, 6, 4, 0, Math.PI, false);
-  backWallShape.lineTo(-4, 0);
-  const backWallGeo = new THREE.ExtrudeGeometry(backWallShape, { depth: 0.5, bevelEnabled: false });
+  backWallShape.moveTo(-5, 0);
+  backWallShape.lineTo(5, 0);
+  backWallShape.lineTo(5, 6);
+  backWallShape.absarc(0, 6, 5, 0, Math.PI, false);
+  backWallShape.lineTo(-5, 0);
+  
+  const backArchHole = new THREE.Path();
+  backArchHole.moveTo(-4, 0);
+  backArchHole.lineTo(-4, 6);
+  backArchHole.absarc(0, 6, 4, Math.PI, 0, true);
+  backArchHole.lineTo(4, 0);
+  backArchHole.lineTo(-4, 0);
+  backWallShape.holes.push(backArchHole);
+  
+  const backWallGeo = new THREE.ExtrudeGeometry(backWallShape, { depth: 1.0, bevelEnabled: false });
   const backWall = new THREE.Mesh(backWallGeo, brickMat);
   backWall.position.set(0, 0, -7.5);
+  backWall.castShadow = true;
   hangarGroup.add(backWall);
 
-  // Massive Glass Window on the back wall
   const backGlassShape = new THREE.Shape();
-  backGlassShape.moveTo(-3, 0);
-  backGlassShape.lineTo(3, 0);
-  backGlassShape.lineTo(3, 5);
-  backGlassShape.absarc(0, 5, 3, 0, Math.PI, false);
-  backGlassShape.lineTo(-3, 0);
+  backGlassShape.absarc(0, 6, 3.8, 0, Math.PI, false);
   const backGlassGeo = new THREE.ExtrudeGeometry(backGlassShape, { depth: 0.2, bevelEnabled: false });
   const backGlass = new THREE.Mesh(backGlassGeo, glassMat);
-  backGlass.position.set(0, 0.5, -7.4);
+  backGlass.position.set(0, 0, -6.9);
   hangarGroup.add(backGlass);
 
-  // Front Arch Facade
+  // Front Wall with Arch
   const frontWallShape = new THREE.Shape();
   frontWallShape.moveTo(-5, 0);
   frontWallShape.lineTo(5, 0);
@@ -180,49 +173,76 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
   frontWallShape.absarc(0, 6, 5, 0, Math.PI, false);
   frontWallShape.lineTo(-5, 0);
   
-  const mainArchHole = new THREE.Path();
-  mainArchHole.moveTo(-4, 0);
-  mainArchHole.lineTo(-4, 6);
-  mainArchHole.absarc(0, 6, 4, Math.PI, 0, true);
-  mainArchHole.lineTo(4, 0);
-  mainArchHole.lineTo(-4, 0);
-  frontWallShape.holes.push(mainArchHole);
+  const frontArchHole = new THREE.Path();
+  frontArchHole.moveTo(-4, 0);
+  frontArchHole.lineTo(-4, 6);
+  frontArchHole.absarc(0, 6, 4, Math.PI, 0, true);
+  frontArchHole.lineTo(4, 0);
+  frontArchHole.lineTo(-4, 0);
+  frontWallShape.holes.push(frontArchHole);
 
   const frontWallGeo = new THREE.ExtrudeGeometry(frontWallShape, { depth: 1.0, bevelEnabled: false });
   const frontWall = new THREE.Mesh(frontWallGeo, brickMat);
-  frontWall.position.set(0, 0, 6.0); // flush with front of 14-depth walls
+  frontWall.position.set(0, 0, 5.5); 
   frontWall.castShadow = true;
   hangarGroup.add(frontWall);
 
+  // Concrete Keystone Rims
+  const rimShape = new THREE.Shape();
+  rimShape.absarc(0, 6, 4.4, 0, Math.PI, false);
+  rimShape.lineTo(-4, 6);
+  rimShape.absarc(0, 6, 4.0, Math.PI, 0, true);
+  rimShape.lineTo(4.4, 6);
+  
+  const rimGeo = new THREE.ExtrudeGeometry(rimShape, { depth: 1.2, bevelEnabled: false });
+  const frontRim = new THREE.Mesh(rimGeo, concreteMat);
+  frontRim.position.set(0, 0, 5.4);
+  frontRim.castShadow = true;
+  hangarGroup.add(frontRim);
+
+  const backRim = new THREE.Mesh(rimGeo, concreteMat);
+  backRim.position.set(0, 0, -7.6);
+  backRim.castShadow = true;
+  hangarGroup.add(backRim);
+
   // Barrel Vault Roof
   const roofShape = new THREE.Shape();
-  roofShape.absarc(0, 0, 5, 0, Math.PI, false);
+  roofShape.absarc(0, 0, 5.2, 0, Math.PI, false); // overhang slightly on the sides
   roofShape.lineTo(-4, 0);
   roofShape.absarc(0, 0, 4, Math.PI, 0, true);
-  roofShape.lineTo(5, 0);
+  roofShape.lineTo(5.2, 0);
   const roofGeo = new THREE.ExtrudeGeometry(roofShape, { depth: 15, bevelEnabled: false });
   const hangarRoof = new THREE.Mesh(roofGeo, roofMat);
-  hangarRoof.position.set(0, 6, -7.5);
+  hangarRoof.position.set(0, 6, -8.0); // overhang on the back and front
   hangarRoof.castShadow = true;
   hangarGroup.add(hangarRoof);
 
-  // Slipway Ramp
-  const rampGroup = new THREE.Group();
-  const rampGeo = new THREE.PlaneGeometry(9, 10);
-  rampGeo.rotateX(-Math.PI / 2);
-  const ramp = new THREE.Mesh(rampGeo, concreteMat);
-  ramp.position.set(0, 0, 0);
-  
-  const railGeo = new THREE.BoxGeometry(0.2, 0.1, 10);
-  const rail1 = new THREE.Mesh(railGeo, steelMat);
-  rail1.position.set(-2.5, 0.05, 0);
-  const rail2 = new THREE.Mesh(railGeo, steelMat);
-  rail2.position.set(2.5, 0.05, 0);
-  rampGroup.add(ramp, rail1, rail2);
-  
-  rampGroup.rotation.x = Math.PI / 16; // tilt down
-  rampGroup.position.set(0, -0.5, 3); // start slightly inside, plunge into river
-  hangarGroup.add(rampGroup);
+  // Internal Steel Trusses
+  const trussGroup = new THREE.Group();
+  const trussGeo = new THREE.CylinderGeometry(4.0, 4.0, 0.3, 24, 1, true, 0, Math.PI);
+  for (let z = -5; z <= 4; z += 3) {
+      const truss = new THREE.Mesh(trussGeo, steelMat);
+      truss.rotation.z = Math.PI / 2;
+      truss.rotation.x = Math.PI / 2;
+      truss.position.set(0, 6, z);
+      trussGroup.add(truss);
+  }
+  hangarGroup.add(trussGroup);
+
+  // Slipway Track (Steel rails + wood ties plunging into river)
+  const trackGroup = new THREE.Group();
+  const railG = new THREE.BoxGeometry(0.3, 0.4, 18);
+  const track1 = new THREE.Mesh(railG, steelMat); track1.position.set(-2, 0.2, 0);
+  const track2 = new THREE.Mesh(railG, steelMat); track2.position.set(2, 0.2, 0);
+  for (let tz = -8; tz <= 8; tz += 1) {
+      const tie = new THREE.Mesh(new THREE.BoxGeometry(5, 0.2, 0.4), woodMat);
+      tie.position.set(0, 0.1, tz);
+      trackGroup.add(tie);
+  }
+  trackGroup.add(track1, track2);
+  trackGroup.rotation.x = Math.PI / 32; // Gentle slope down
+  trackGroup.position.set(0, -0.2, 0);
+  hangarGroup.add(trackGroup);
 
   tagReveal(hangarGroup, 0.2, 0.5);
   structureGroup.add(hangarGroup);
@@ -231,25 +251,20 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
   // 2. Side Wings
   for (let side of [-1, 1]) {
     const wingGroup = new THREE.Group();
-    const wX = side * 7; // Center of wing is 7 or -7. Width is 4. (Spans 5 to 9)
+    const wX = side * 7;
 
-    // Solid core of the wing
     const wingCore = new THREE.Mesh(new THREE.BoxGeometry(4, 4, 12), brickMat);
-    wingCore.position.set(wX, 2, 0);
+    wingCore.position.set(wX, 2, -0.5);
     wingCore.castShadow = true;
     wingGroup.add(wingCore);
 
-    // Cutout arches for colonnade on the outer and front faces (simulated via applied geometries or just detailed facades)
-    // Actually, to make it simple and elegant, we'll build the arcade out of pillars and arches.
     const arcadeGroup = new THREE.Group();
-    
-    // 3 Arches along the front
     for (let i = 0; i < 3; i++) {
       const archFrontShape = new THREE.Shape();
       archFrontShape.moveTo(-0.6, 0);
       archFrontShape.lineTo(0.6, 0);
-      archFrontShape.lineTo(0.6, 2.5);
-      archFrontShape.lineTo(-0.6, 2.5);
+      archFrontShape.lineTo(0.6, 4.0);
+      archFrontShape.lineTo(-0.6, 4.0);
       archFrontShape.lineTo(-0.6, 0);
       
       const aHole = new THREE.Path();
@@ -262,44 +277,57 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
       
       const aGeo = new THREE.ExtrudeGeometry(archFrontShape, { depth: 0.5, bevelEnabled: false });
       const archMesh = new THREE.Mesh(aGeo, brickMat);
-      archMesh.position.set(wX + (i-1)*1.2, 0, 6);
+      archMesh.position.set(wX + (i-1)*1.2, 0, 5.5);
       arcadeGroup.add(archMesh);
     }
     
-    // Glass behind the arcade
     const glassFacade = new THREE.Mesh(new THREE.BoxGeometry(3.6, 2, 0.2), glassMat);
-    glassFacade.position.set(wX, 1, 5.8);
+    glassFacade.position.set(wX, 1, 5.3);
     arcadeGroup.add(glassFacade);
 
     wingGroup.add(arcadeGroup);
 
-    // Wing Roof (Barrel Vault)
+    // Warm Industrial Night Lights under the arcade
+    const light = new THREE.PointLight(0xffaa55, 0); 
+    light.distance = 8;
+    light.userData.isStreetlight = true; 
+    light.position.set(wX, 3.0, 5.0); 
+    wingGroup.add(light);
+
     const wRoofShape = new THREE.Shape();
-    wRoofShape.absarc(0, 0, 2, 0, Math.PI, false);
+    wRoofShape.absarc(0, 0, 2.1, 0, Math.PI, false);
     wRoofShape.lineTo(-1.8, 0);
     wRoofShape.absarc(0, 0, 1.8, Math.PI, 0, true);
-    wRoofShape.lineTo(2, 0);
-    const wRoofGeo = new THREE.ExtrudeGeometry(wRoofShape, { depth: 12.5, bevelEnabled: false });
+    wRoofShape.lineTo(2.1, 0);
+    const wRoofGeo = new THREE.ExtrudeGeometry(wRoofShape, { depth: 13.5, bevelEnabled: false });
     const wRoof = new THREE.Mesh(wRoofGeo, roofMat);
-    wRoof.position.set(wX, 4, -6.25);
+    wRoof.position.set(wX, 4, -7.0);
     wRoof.castShadow = true;
     wingGroup.add(wRoof);
 
-    // Chimney
+    // Chimney (No smoke, clean industrial look)
     const chimney = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 3, 8), brickMat);
     chimney.position.set(wX, 6, 2);
     chimney.castShadow = true;
     wingGroup.add(chimney);
 
-    // Smoke
-    const smokeGeo = new THREE.SphereGeometry(1.2, 16, 16);
-    const smoke = new THREE.Mesh(smokeGeo, smokeMat);
-    smoke.position.set(wX, 8, 2);
-    tagReveal(smoke, 0.8, 1.0); // Smoke appears at the end
-    wingGroup.add(smoke);
-
     tagReveal(wingGroup, 0.4, 0.7);
     structureGroup.add(wingGroup);
+  }
+
+  // Wooden Boardwalk and Mooring Bollards alongside the slipway track
+  for (let side of [-1, 1]) {
+    const bwGroup = new THREE.Group();
+    const plank = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.15, 12), woodMat);
+    plank.position.set(side * 3.5, 0.05, 1);
+    bwGroup.add(plank);
+    
+    for (let bz = -4; bz <= 6; bz += 2.5) {
+      const bollard = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 0.6), steelMat);
+      bollard.position.set(side * 2.9, 0.3, bz);
+      bwGroup.add(bollard);
+    }
+    hangarGroup.add(bwGroup);
   }
 
   monumentGroup.add(structureGroup);
@@ -310,36 +338,31 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
   const craneData = createTowerCrane(10.0);
   const crane = craneData.group;
   crane.position.set(-10, 0, 6);
-  tagTempProp(crane, 0.15, 0.85); // leaves eventually
+  tagTempProp(crane, 0.15, 0.85);
   monumentGroup.add(crane);
 
-  // Permanent Dock Cranes
   const dockCrane1 = createTowerCrane(5.0).group;
-  dockCrane1.position.set(9, 0, 8);
+  dockCrane1.position.set(10, 0, 8);
   tagReveal(dockCrane1, 0.6, 0.8);
   detailsGroup.add(dockCrane1);
 
   const dockCrane2 = createTowerCrane(5.0).group;
-  dockCrane2.position.set(-9, 0, 8);
+  dockCrane2.position.set(-10, 0, 8);
   tagReveal(dockCrane2, 0.65, 0.85);
   detailsGroup.add(dockCrane2);
 
   const stacks = createMaterialStacks();
-  stacks.position.set(7, 0, 4);
+  stacks.position.set(7, 0, 3);
   tagReveal(stacks, 0.7, 0.9);
   detailsGroup.add(stacks);
 
   // Signage "SIBLING SHIPYARD"
-  const whitePaintMat = new THREE.MeshStandardMaterial({
-    color: 0xffffff, roughness: 0.9, flatShading: true, emissive: 0xffffff, emissiveIntensity: 0.3
-  });
-
   const signGroup = new THREE.Group();
   tagReveal(signGroup, 0.75, 0.95);
   
   loadFont((font) => {
     const createDecal = (text: string, mat: THREE.Material) => {
-      const geo = new TextGeometry(text, { font, size: 1.2, depth: 0.1, curveSegments: 2, bevelEnabled: false });
+      const geo = new TextGeometry(text, { font, size: 0.8, depth: 0.1, curveSegments: 2, bevelEnabled: false }); // Scaled down text
       geo.computeBoundingBox();
       return { mesh: new THREE.Mesh(geo, mat), width: geo.boundingBox!.max.x - geo.boundingBox!.min.x };
     };
@@ -349,27 +372,38 @@ export function buildShipyard(config: { stage?: string } = {}): BuildingResult {
     const wordGroup = new THREE.Group();
     let cursorX = 0;
     for (let i = 0; i < text.length; i++) {
-      if (text[i] === ' ') { cursorX += 0.6; continue; }
+      if (text[i] === ' ') { cursorX += 0.5; continue; }
       const { mesh, width } = createDecal(text[i], whitePaintMat);
-      mesh.scale.set(0.7, 1.0, 1.0);
+      mesh.scale.set(0.8, 1.0, 1.0);
       mesh.position.set(cursorX, 0, 0);
       wordGroup.add(mesh);
-      cursorX += (width * 0.7) + tracking;
+      cursorX += (width * 0.8) + tracking;
     }
     wordGroup.position.x = -cursorX / 2;
     wordGroup.position.y = 7.1;
-    wordGroup.position.z = 7.8;
+    wordGroup.position.z = 8.1; // Forward to clear roof
     signGroup.add(wordGroup);
+
+    // Secondary Nameboard on Right Wing
+    const smallGeo = new TextGeometry("EST. 2026", { font, size: 0.35, depth: 0.05, curveSegments: 1, bevelEnabled: false });
+    smallGeo.computeBoundingBox();
+    const smallMesh = new THREE.Mesh(smallGeo, whitePaintMat);
+    smallMesh.position.set(- (smallGeo.boundingBox!.max.x - smallGeo.boundingBox!.min.x)/2, -0.15, 0.1);
+    
+    const smallBacking = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.6, 0.2), concreteMat);
+    smallBacking.position.set(7, 3, 6.1); // On the right wing's arcade
+    smallBacking.add(smallMesh);
+    detailsGroup.add(smallBacking);
   });
   
-  // A brick backing for the sign to mount on
-  const signBacking = new THREE.Mesh(new THREE.BoxGeometry(11, 1.6, 0.4), brickMat);
-  signBacking.position.set(0, 7.5, 7.6);
+  // A wider brick backing for the main sign
+  const signBacking = new THREE.Mesh(new THREE.BoxGeometry(13, 1.6, 0.4), brickMat);
+  signBacking.position.set(0, 7.5, 7.9);
   signGroup.add(signBacking);
   
-  // Place sign over the main arch
   signGroup.position.set(0, 0, 0);
   monumentGroup.add(signGroup);
+  monumentGroup.add(detailsGroup);
 
   monumentGroup.scale.set(0.8, 0.8, 0.8);
 
