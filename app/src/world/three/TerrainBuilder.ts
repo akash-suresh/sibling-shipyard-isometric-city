@@ -66,18 +66,21 @@ export class TerrainBuilder {
           waterMesh.rotation.x = -Math.PI / 2;
           waterMesh.position.set(worldX, -0.2, worldZ);
           waterMesh.receiveShadow = true;
+          waterMesh.userData = { isTerrain: true, x, y };
           group.add(waterMesh);
           waterMeshes.push({ mesh: waterMesh, ix: x, iy: y });
           
           const dirtMesh = new THREE.Mesh(new THREE.BoxGeometry(CELL_SIZE, 1, CELL_SIZE), dirtMat);
           dirtMesh.position.set(worldX, -1.5, worldZ);
           dirtMesh.receiveShadow = true;
+          dirtMesh.userData = { isTerrain: true, x, y };
           group.add(dirtMesh);
         } else {
           const cellMesh = new THREE.Mesh(terrainGeo, islandMats);
           cellMesh.position.set(worldX, -1, worldZ);
           cellMesh.receiveShadow = true;
           cellMesh.castShadow = true;
+          cellMesh.userData = { isTerrain: true, x, y };
           group.add(cellMesh);
         }
 
@@ -85,17 +88,34 @@ export class TerrainBuilder {
           const roadMesh = new THREE.Mesh(new THREE.BoxGeometry(CELL_SIZE, 0.05, CELL_SIZE), roadMat);
           roadMesh.position.set(worldX, 0.025, worldZ);
           roadMesh.receiveShadow = true;
+          roadMesh.userData = { isTerrain: true, x, y };
           group.add(roadMesh);
+          const hasLeft = roadSet.has(`${x - 1},${y}`);
+          const hasRight = roadSet.has(`${x + 1},${y}`);
+          const hasTop = roadSet.has(`${x},${y - 1}`);
+          const hasBottom = roadSet.has(`${x},${y + 1}`);
+
+          const isHorizontal = (hasLeft || hasRight) && !hasTop && !hasBottom;
+          const isVertical = (hasTop || hasBottom) && !hasLeft && !hasRight;
           
-          const dash = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, CELL_SIZE * 0.4), whiteMat);
-          dash.position.set(worldX, 0.06, worldZ);
-          group.add(dash);
+          if (isHorizontal) {
+            const dash = new THREE.Mesh(new THREE.BoxGeometry(CELL_SIZE * 0.4, 0.02, 0.2), whiteMat);
+            dash.position.set(worldX, 0.06, worldZ);
+            dash.userData = { isTerrain: true, x, y };
+            group.add(dash);
+          } else if (isVertical) {
+            const dash = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, CELL_SIZE * 0.4), whiteMat);
+            dash.position.set(worldX, 0.06, worldZ);
+            dash.userData = { isTerrain: true, x, y };
+            group.add(dash);
+          }
         }
         
         if (plazaSet.has(key)) {
           const plazaMesh = new THREE.Mesh(new THREE.BoxGeometry(CELL_SIZE, 0.05, CELL_SIZE), concreteMat);
           plazaMesh.position.set(worldX, 0.025, worldZ);
           plazaMesh.receiveShadow = true;
+          plazaMesh.userData = { isTerrain: true, x, y };
           group.add(plazaMesh);
         }
 
@@ -103,17 +123,111 @@ export class TerrainBuilder {
           const pathMesh = new THREE.Mesh(new THREE.BoxGeometry(CELL_SIZE * 0.8, 0.08, CELL_SIZE * 0.8), concreteMat);
           pathMesh.position.set(worldX, 0.04, worldZ);
           pathMesh.receiveShadow = true;
+          pathMesh.userData = { isTerrain: true, x, y };
           group.add(pathMesh);
         }
       }
     }
 
+
     layout.bridges.forEach(bridge => {
-      const bridgeMesh = new THREE.Mesh(new THREE.BoxGeometry(CELL_SIZE, 0.2, CELL_SIZE), bridgeMat);
-      bridgeMesh.position.set(bridge.grid.x * CELL_SIZE, 0.1, bridge.grid.y * CELL_SIZE);
-      bridgeMesh.castShadow = true;
-      bridgeMesh.receiveShadow = true;
-      group.add(bridgeMesh);
+      const bGroup = new THREE.Group();
+      bGroup.position.set(bridge.grid.x * CELL_SIZE, 0, bridge.grid.y * CELL_SIZE);
+      
+      const isX = bridge.axis === "x";
+      
+      const whitePaintMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.8, flatShading: true });
+      const roadMat = new THREE.MeshStandardMaterial({ color: 0x555555, flatShading: true });
+      const steelMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8, flatShading: true });
+      const brickMat = new THREE.MeshStandardMaterial({ color: 0x7a3e3e, roughness: 0.9 });
+
+      for (let side of [-1, 1]) {
+        const bankGroup = new THREE.Group();
+        const rotAngle = 0; 
+        
+        const pivotX = 1.6;
+        const deckLength = 1.6; 
+
+        // Brick abutments (hugging the road, leaving the center clear)
+        for (let zSide of [-1, 1]) {
+           const abutment = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.4, 0.6), brickMat);
+           abutment.position.set(side * 1.6, 0.2, zSide * 1.1); 
+           abutment.castShadow = true;
+           bankGroup.add(abutment);
+           
+           // Base for the post
+           const base = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.45, 0.5), whitePaintMat);
+           base.position.set(side * pivotX, 0.425, zSide * 1.0);
+           bankGroup.add(base);
+
+           // Vertical Posts (Hameistijlen)
+           const post = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4.2, 0.3), whitePaintMat);
+           post.position.set(side * pivotX, 2.3, zSide * 1.0);
+           post.castShadow = true;
+           bankGroup.add(post);
+        }
+
+        // Top cross beam
+        const topBeam = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 2.3), whitePaintMat);
+        topBeam.position.set(side * pivotX, 4.4, 0);
+        bankGroup.add(topBeam);
+
+        // Deck (Val)
+        const deckGroup = new THREE.Group();
+        deckGroup.position.set(side * pivotX, 0.1, 0); 
+
+        const deck = new THREE.Mesh(new THREE.BoxGeometry(deckLength, 0.15, CELL_SIZE), roadMat);
+        deck.position.set(side * -(deckLength / 2), 0, 0); 
+        deck.castShadow = true;
+        deckGroup.add(deck);
+
+        const railG = new THREE.BoxGeometry(deckLength, 0.2, 0.05);
+        const r1 = new THREE.Mesh(railG, whitePaintMat); r1.position.set(side * -(deckLength / 2), 0.15, 0.975); deckGroup.add(r1);
+        const r2 = new THREE.Mesh(railG, whitePaintMat); r2.position.set(side * -(deckLength / 2), 0.15, -0.975); deckGroup.add(r2);
+        
+        deckGroup.rotation.z = rotAngle;
+        bankGroup.add(deckGroup);
+
+        // Balance Mechanism (Balans)
+        const balansGroup = new THREE.Group();
+        balansGroup.position.set(side * pivotX, 4.55, 0); 
+        
+        const beamLength = 3.0; // 1.6 forward, 1.4 backward
+        const beamGeo = new THREE.BoxGeometry(beamLength, 0.2, 0.15); 
+        const arm1 = new THREE.Mesh(beamGeo, whitePaintMat);
+        arm1.position.set(side * -0.1, 0, 1.0); // Aligned with posts
+        balansGroup.add(arm1);
+        const arm2 = new THREE.Mesh(beamGeo, whitePaintMat);
+        arm2.position.set(side * -0.1, 0, -1.0);
+        balansGroup.add(arm2);
+
+        // Cross bracing between balance arms
+        const brace = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.1, 1.8), whitePaintMat);
+        brace.position.set(side * -0.8, 0, 0);
+        balansGroup.add(brace);
+
+        // Counterweight (Ballastkist)
+        const cw = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 2.2), whitePaintMat);
+        cw.position.set(side * 1.0, -0.4, 0); 
+        balansGroup.add(cw);
+
+        // Hangers
+        for (let zSide of [-1, 1]) {
+           const hanger = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 4.35), steelMat);
+           hanger.position.set(side * -1.5, -2.175, zSide * 1.0); // Perfectly align with rails
+           hanger.rotation.z = -rotAngle; 
+           balansGroup.add(hanger);
+        }
+
+        balansGroup.rotation.z = rotAngle;
+        bankGroup.add(balansGroup);
+
+        if (!isX) {
+           bankGroup.rotation.y = Math.PI / 2;
+        }
+        bGroup.add(bankGroup);
+      }
+      group.add(bGroup);
     });
 
     // --- DIORAMA CRUST FOUNDATION ---

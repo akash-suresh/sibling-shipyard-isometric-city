@@ -12,6 +12,8 @@ export class IsometricCamera {
   private focusElapsed = 0;
   private focusDuration = 0;
 
+  public enabled = true;
+
   constructor(camera: THREE.OrthographicCamera, domElement: HTMLElement) {
     this.camera = camera;
     this.domElement = domElement;
@@ -25,6 +27,7 @@ export class IsometricCamera {
   
   enableZoom(min: number, max: number): void {
     this.domElement.addEventListener('wheel', (e) => {
+      if (!this.enabled) return;
       e.preventDefault();
       const zoomFactor = e.deltaY > 0 ? 1.1 : 0.9;
       this.camera.zoom = Math.max(min, Math.min(max, this.camera.zoom * zoomFactor));
@@ -61,6 +64,7 @@ export class IsometricCamera {
   }
 
   private onPointerDown = (e: PointerEvent) => {
+    if (!this.enabled) return;
     this.isDragging = true;
     this.previousMousePosition = { x: e.clientX, y: e.clientY };
   };

@@ -42,118 +42,71 @@ const point = (x: number, y: number): Point => ({ x, y })
 
 export const shipyardZeroLayout: TownLayout = {
   id: "shipyard-zero",
-  width: 24,
-  height: 24,
+  width: 32,
+  height: 32,
   roads: [
-    ...Array.from({ length: 24 }, (_, index) => point(index, 12)), // Horizontal road
-    ...Array.from({ length: 24 }, (_, index) => point(12, index)).filter(p => p.y !== 12), // Vertical road
+    // Main horizontal artery across the whole map
+    ...Array.from({ length: 32 }, (_, i) => point(i, 12)),
+    // A vertical road stemming from the artery and going South
+    ...Array.from({ length: 20 }, (_, i) => point(20, 12 + i)).filter(p => p.y !== 12),
+    // A secondary horizontal road branching East
+    ...Array.from({ length: 12 }, (_, i) => point(20 + i, 22)).filter(p => p.x !== 20)
   ],
-  plazas: [
-    // Nexus Plaza
-    point(14, 4), point(15, 4), point(16, 4),
-    point(14, 6), point(15, 6), point(16, 6),
-    point(15, 5), point(16, 5),
-  ],
+  plazas: [],
   paths: [
-    // Path to 1% (Orion)
-    point(4, 13), point(4, 14), point(4, 15), point(4, 16), point(4, 17), point(4, 18), point(4, 19), point(5, 19), point(6, 19),
-    // Path to 3 of Spades
-    point(13, 19), point(14, 19), point(15, 19), point(16, 19), point(17, 19), point(18, 19), point(19, 19), point(20, 19),
-    // Path connecting Nexus to road
-    point(14, 7), point(14, 8), point(14, 9), point(14, 10), point(14, 11),
-    point(13, 11) // connect to x=12 road
+    point(25, 10),
+    point(25, 11),
+    point(21, 17)
   ],
-  water: Array.from({ length: 24 }, (_, y) => point(2, y)).filter(({ y }) => y !== 12),
-  bridges: [{ grid: point(2, 12), axis: "x" }],
+  water: Array.from({ length: 32 }, (_, y) => point(8, y)).filter(({ y }) => y !== 12),
+  bridges: [
+    { grid: point(8, 12), axis: "x" }
+  ],
   decor: [
-    // Trees along the river
-    { kind: "tree", grid: point(1, 4) }, { kind: "tree", grid: point(1, 10) },
-    { kind: "tree", grid: point(1, 16) }, { kind: "tree", grid: point(1, 20) },
-    { kind: "tree", grid: point(3, 4) }, { kind: "tree", grid: point(3, 10) },
-    { kind: "tree", grid: point(3, 16) }, { kind: "tree", grid: point(3, 20) },
-    // Trees in Nexus plaza
-    { kind: "tree", grid: point(14, 4) }, { kind: "tree", grid: point(14, 6) },
-    // Street lamps
-    { kind: "lamp", grid: point(11, 11) }, { kind: "lamp", grid: point(13, 11) },
-    { kind: "lamp", grid: point(11, 13) }, { kind: "lamp", grid: point(13, 13) },
-    { kind: "lamp", grid: point(8, 11) }, { kind: "lamp", grid: point(16, 11) },
+    { kind: "tree", grid: point(18, 14) }, { kind: "tree", grid: point(18, 16) }, { kind: "tree", grid: point(18, 18) },
+    { kind: "tree", grid: point(22, 14) }, { kind: "tree", grid: point(24, 14) }, { kind: "tree", grid: point(26, 14) },
+    // A nice park in bottom left
+    { kind: "tree", grid: point(10, 20) }, { kind: "tree", grid: point(12, 21) }, { kind: "tree", grid: point(14, 20) },
+    { kind: "tree", grid: point(11, 23) }, { kind: "tree", grid: point(13, 24) }, { kind: "tree", grid: point(15, 23) },
+    // Riverbank trees
+    { kind: "tree", grid: point(6, 6) }, { kind: "tree", grid: point(10, 6) },
+    { kind: "tree", grid: point(6, 30) }, { kind: "tree", grid: point(10, 30) }
   ],
   routes: [
     {
-      id: "walker-1",
-      actor: "person",
-      waypoints: [point(16, 14), point(16, 12), point(12, 12), point(12, 6), point(13, 6)],
-      durationMs: 25000,
-      reducedProgress: 0.1,
-      offset: point(0, 0),
-    },
-    {
-      id: "walker-2",
-      actor: "person",
-      waypoints: [point(20, 15), point(20, 12), point(14, 12), point(14, 14)],
-      durationMs: 22000,
-      reducedProgress: 0.3,
-      offset: point(-0.2, 0.2),
-    },
-    {
-      id: "walker-3",
-      actor: "person",
-      waypoints: [point(14, 14), point(14, 16), point(16, 16), point(16, 14)],
-      durationMs: 18000,
-      reducedProgress: 0.8,
-      offset: point(0.2, -0.2),
-    },
-    {
       id: "car-1",
       actor: "service-vehicle",
-      waypoints: [point(0, 12), point(23, 12)],
-      durationMs: 12000,
+      waypoints: [point(0, 12), point(31, 12)],
+      durationMs: 14000,
       reducedProgress: 0.5,
-      offset: point(0, 0.25), // drive on the right side of the road
+      offset: point(0, 0.25),
       accent: "nexus",
     },
     {
       id: "car-2",
       actor: "service-vehicle",
-      waypoints: [point(23, 12), point(12, 12), point(12, 0)],
+      waypoints: [point(31, 12), point(20, 12), point(20, 31)],
       durationMs: 15000,
       reducedProgress: 0.8,
-      offset: point(0, -0.25), // drive on the right side
+      offset: point(0, -0.25),
       accent: "orion",
     },
     {
       id: "car-3",
       actor: "service-vehicle",
-      waypoints: [point(12, 23), point(12, 12), point(0, 12)],
-      durationMs: 16000,
+      waypoints: [point(20, 31), point(20, 22), point(31, 22)],
+      durationMs: 12000,
       reducedProgress: 0.2,
-      offset: point(0, -0.25), // drive on the right side
+      offset: point(-0.25, 0),
       accent: "spark",
     },
     {
-      id: "car-4",
-      actor: "service-vehicle",
-      waypoints: [point(0, 12), point(12, 12), point(12, 23)],
-      durationMs: 14000,
-      reducedProgress: 0.6,
-      offset: point(0, 0.25), 
-      accent: "nexus",
-    },
-    {
-      id: "person-2",
+      id: "drone-1",
       actor: "person",
-      waypoints: [point(14, 4), point(16, 4), point(16, 6), point(14, 6)],
-      durationMs: 22000,
-      reducedProgress: 0.1,
-      offset: point(0.2, 0.2),
-    },
-    {
-      id: "person-3",
-      actor: "person",
-      waypoints: [point(8, 8), point(12, 8), point(12, 10), point(8, 10)],
+      waypoints: [point(10, 4), point(24, 4), point(24, 20), point(10, 20), point(10, 4)],
       durationMs: 25000,
-      reducedProgress: 0.5,
-      offset: point(-0.2, -0.2),
+      reducedProgress: 0,
+      offset: point(0, 0),
     }
   ]
 }

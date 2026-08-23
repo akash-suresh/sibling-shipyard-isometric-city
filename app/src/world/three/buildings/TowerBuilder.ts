@@ -130,14 +130,7 @@ export function buildTower(config: {
   tagTempProp(fence, 0.0, 0.6); // Fence stays until mostly done
   constructionGroup.add(fence);
 
-  const craneData = createTowerCrane(9.0); // Taller than the building, but not ridiculous
-  const crane = craneData.group;
-  crane.position.set(2.5, 0, -2.5); // Push it slightly further out
-  crane.scale.set(1.4, 1.4, 1.4); // Scale the structure slightly
-  tagTempProp(crane, 0.1, 0.75); // Crane leaves when skin is done
-  constructionGroup.add(crane);
-  // We can also let the crane use its own internal updatable for spinning its head!
-  // rotatingElements.push(crane); // We don't need this, we'll use craneData.updatable
+
 
   const truck = createDumpTruck();
   truck.position.set(2, 0, 2);
@@ -249,7 +242,7 @@ export function buildTower(config: {
   
   // Corporate floating sculpture on the plaza
   const sculpture = new THREE.Mesh(new THREE.OctahedronGeometry(0.4), accentMat);
-  sculpture.position.set(-2, 1, 2);
+  sculpture.position.set(-2.5, 1, 2.5); // Push it slightly further out from the core (-2 to 2)
   sculpture.castShadow = true;
   tagReveal(sculpture, 0.9, 1.0);
   lifeGroup.add(sculpture);
@@ -263,7 +256,7 @@ export function buildTower(config: {
   const stageMap: Record<string, number> = {
     idea: 0.2,       // Foundation & Pit
     prototype: 0.45, // Skeleton up
-    shipped: 0.75,   // Skin up
+    shipped: 1.0,    // Skin up and temp props gone
     landmark: 1.0    // Clutter & Life
   };
   
@@ -320,10 +313,6 @@ export function buildTower(config: {
       });
 
       // 2. Ambient Animations
-      if (currentProgress > 0.1 && currentProgress < 0.8) {
-         craneData.updatable.update(delta);
-      }
-
       rotatingElements.forEach(el => {
         el.rotation.y += delta * 0.5;
       });
@@ -334,6 +323,20 @@ export function buildTower(config: {
       });
     }
   };
+
+  if (config.status === 'building') {
+    const craneData = createTowerCrane(9.0);
+    const crane = craneData.group;
+    crane.position.set(2.5, 0, -2.5);
+    crane.scale.set(1.4, 1.4, 1.4);
+    constructionGroup.add(crane);
+    
+    const originalUpdate = updatable.update;
+    updatable.update = (delta: number, time?: number) => {
+      originalUpdate.call(updatable, delta, time);
+      craneData.updatable.update(delta, time);
+    };
+  }
 
   return { group, updatable };
 }

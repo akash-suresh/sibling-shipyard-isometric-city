@@ -28,7 +28,7 @@ export class BuildingFactory {
       // If it exists and hasn't changed archetype, update it!
       if (cached && cached.archetype === project.building.archetype) {
         // Update its position
-        cached.group.position.set(project.grid.x * CELL_SIZE, 0, project.grid.y * CELL_SIZE);
+        cached.group.position.set(project.grid.x * CELL_SIZE + 4, 0, project.grid.y * CELL_SIZE + 4);
         
         // Update its internal stage if it supports it
         if (cached.result.updatable && (cached.result.updatable as any).setStage) {
@@ -54,74 +54,91 @@ export class BuildingFactory {
         logo: project.logo // Pass logo for builders to use!
       };
 
+      console.log(`Building ${project.id} at ${project.grid.x}, ${project.grid.y}`);
+
+      const wrapperGroup = new THREE.Group();
+      // Center of a 4x4 cell grid area starting at project.grid
+      wrapperGroup.position.set(project.grid.x * CELL_SIZE + 4, 0, project.grid.y * CELL_SIZE + 4);
+      wrapperGroup.userData = { projectId: project.id, projectName: project.name };
+
       if (project.building.archetype === 'workshop') {
         result = buildWorkshop(config);
         result.group.scale.set(0.6, 0.6, 0.6); 
       } else if (project.building.archetype === 'studio') {
         result = buildStudio(config);
-        result.group.scale.set(1.2, 1.2, 1.2);
+        result.group.scale.set(1.0, 1.0, 1.0); // Exactly 8x8 units (4x4 cells)
       } else if (project.building.archetype === 'tower') {
         result = buildTower(config);
-        result.group.scale.set(1.4, 1.4, 1.4); // Made tower 40% bigger!
+        result.group.scale.set(1.333, 1.333, 1.333); // 6x6 * 1.333 = 8x8 units (4x4 cells)
       } else {
         return;
       }
 
-      result.group.position.set(project.grid.x * CELL_SIZE, 0, project.grid.y * CELL_SIZE);
-      result.group.userData = { projectId: project.id, projectName: project.name };
+      wrapperGroup.add(result.group);
       
       const roofSign = createBuildingSign(project, false);
       roofSign.scale.set(0.18, 0.18, 0.18); // Much bigger roof logo!
       roofSign.rotation.y = Math.PI / 4;
+      roofSign.userData = { ...roofSign.userData, draggable: true, elementId: "roofSign", projectId: project.id };
       
       const groundSign = createBuildingSign(project, true); // Force text on grass
       groundSign.scale.set(0.08, 0.08, 0.08); 
+      groundSign.userData = { draggable: true, elementId: "groundSign", projectId: project.id };
       
       if (project.building.archetype === 'workshop') {
-        roofSign.position.set(0, 4.5, 0);
-        groundSign.position.set(2, 0.6, 3.5);
-        roofSign.userData = { revealStart: 0.8, revealEnd: 0.9, baseScale: roofSign.scale.clone() };
+        roofSign.position.set(0, 7.5, -2); // Relative to wrapper origin
+        groundSign.position.set(2, 0.6, 3.5); 
+        roofSign.userData = { ...roofSign.userData, revealStart: 0.8, revealEnd: 0.9, baseScale: roofSign.scale.clone() };
         roofSign.scale.setScalar(0);
         result.group.add(roofSign);
       } else if (project.building.archetype === 'studio') {
-        // Skip adding the billboard if a logo is provided; the Studio paints it on its terrace!
         if (!project.logo) {
-          roofSign.position.set(0, 6.0, 0);
-          roofSign.userData = { revealStart: 0.8, revealEnd: 0.9, baseScale: roofSign.scale.clone() };
+          roofSign.position.set(0, 5.0, 0); 
+          roofSign.userData = { ...roofSign.userData, revealStart: 0.8, revealEnd: 0.9, baseScale: roofSign.scale.clone() };
           roofSign.scale.setScalar(0);
           result.group.add(roofSign);
         }
-        // Move ground sign ahead of the footpath, onto the grass
-        groundSign.position.set(4.0, 0.6, 7.0);
+        
+        // Move ground sign to the grass in front
+        groundSign.position.set(0, 0.6, 4.5);
       } else if (project.building.archetype === 'tower') {
-        roofSign.position.set(0, 9.5, 0);
-        // Move ground sign further to the front (+Z and +X) into the grass
-        groundSign.position.set(4.5, 0.6, 4.5); 
-        roofSign.userData = { revealStart: 0.9, revealEnd: 1.0, baseScale: roofSign.scale.clone() };
+        roofSign.position.set(0, 13.5 / 1.333, 0); 
+        // Move ground sign to the grass in front
+        groundSign.position.set(2.0, 0.6, 3.5); 
+        const baseScale = new THREE.Vector3(0.18 / 1.333, 0.18 / 1.333, 0.18 / 1.333);
+        roofSign.userData = { ...roofSign.userData, revealStart: 0.9, revealEnd: 1.0, baseScale: baseScale };
         roofSign.scale.setScalar(0);
         result.group.add(roofSign);
       }
       
-      result.group.add(groundSign);
+      // Apply user overrides if they exist
+      if (project.overrides?.groundSign) {
+        groundSign.position.set(project.overrides.groundSign.x, project.overrides.groundSign.y, project.overrides.groundSign.z);
+      }
+      if (project.overrides?.roofSign) {
+        roofSign.position.set(project.overrides.roofSign.x, project.overrides.roofSign.y, project.overrides.roofSign.z);
+      }
+      
+      wrapperGroup.add(groundSign);
 
       const buildingUpdatables: Updatable[] = [];
-      const statusUpdatables = applyStatusEffects(result.group, project.status);
+      const statusUpdatables = applyStatusEffects(wrapperGroup, project.status);
       buildingUpdatables.push(...statusUpdatables);
 
-      const stageUpdatables = applyStageEffects(result.group, project.stage);
+      const stageUpdatables = applyStageEffects(wrapperGroup, project.stage);
       buildingUpdatables.push(...stageUpdatables);
       if (result.updatable) {
         buildingUpdatables.push(result.updatable);
       }
 
       this.cache.set(project.id, {
-        group: result.group,
+        group: wrapperGroup,
         updatables: buildingUpdatables,
         result: result,
         archetype: project.building.archetype
       });
 
-      group.add(result.group);
+      group.add(wrapperGroup);
       updatables.push(...buildingUpdatables);
       newUpdatables.push(...buildingUpdatables);
     });

@@ -20,6 +20,7 @@ export interface ProjectDefinition {
   latestMilestone?: string
   nextMilestone?: string
   logo?: string
+  overrides?: Record<string, { x: number, y: number, z: number }>
 }
 
 export interface MilestoneDefinition {
