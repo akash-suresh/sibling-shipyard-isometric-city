@@ -28,6 +28,22 @@ const saveProjectsPlugin = () => ({
         }
       });
     });
+
+    server.middlewares.use('/api/save-layout', (req: any, res: any) => {
+      let body = '';
+      req.on('data', (chunk: any) => body += chunk);
+      req.on('end', () => {
+        try {
+          const filePath = path.resolve(_dirname, 'src/data/layout.json');
+          fs.writeFileSync(filePath, JSON.stringify(JSON.parse(body), null, 2));
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true }));
+        } catch (e) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: String(e) }));
+        }
+      });
+    });
   }
 });
 

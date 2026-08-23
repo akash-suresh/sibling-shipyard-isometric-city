@@ -90,24 +90,25 @@ export class BuildingFactory {
         groundSign.position.set(2, 0.6, 3.5); 
         roofSign.userData = { ...roofSign.userData, revealStart: 0.8, revealEnd: 0.9, baseScale: roofSign.scale.clone() };
         roofSign.scale.setScalar(0);
-        wrapperGroup.add(roofSign);
+        result.group.add(roofSign);
       } else if (project.building.archetype === 'studio') {
         if (!project.logo) {
           roofSign.position.set(0, 5.0, 0); 
           roofSign.userData = { ...roofSign.userData, revealStart: 0.8, revealEnd: 0.9, baseScale: roofSign.scale.clone() };
           roofSign.scale.setScalar(0);
-          wrapperGroup.add(roofSign);
+          result.group.add(roofSign);
         }
         
         // Move ground sign to the grass in front
         groundSign.position.set(0, 0.6, 4.5);
       } else if (project.building.archetype === 'tower') {
-        roofSign.position.set(0, 13.5, 0); // Need to account for tower's unscaled height
+        roofSign.position.set(0, 13.5 / 1.333, 0); 
         // Move ground sign to the grass in front
         groundSign.position.set(2.0, 0.6, 3.5); 
-        roofSign.userData = { ...roofSign.userData, revealStart: 0.9, revealEnd: 1.0, baseScale: roofSign.scale.clone() };
+        const baseScale = new THREE.Vector3(0.18 / 1.333, 0.18 / 1.333, 0.18 / 1.333);
+        roofSign.userData = { ...roofSign.userData, revealStart: 0.9, revealEnd: 1.0, baseScale: baseScale };
         roofSign.scale.setScalar(0);
-        wrapperGroup.add(roofSign);
+        result.group.add(roofSign);
       }
       
       // Apply user overrides if they exist

@@ -6,7 +6,7 @@
     "stage": "shipped",
     "status": "live",
     "grid": {
-      "x": 20,
+      "x": 19,
       "y": 3
     },
     "building": {
@@ -15,7 +15,14 @@
     },
     "logo": "/coach-hq-logo.png",
     "latestMilestone": "V1 Released",
-    "nextMilestone": "V2 Planning"
+    "nextMilestone": "V2 Planning",
+    "overrides": {
+      "groundSign": {
+        "x": 1.0862306031434557,
+        "y": 0.6,
+        "z": 8.410141038203665
+      }
+    }
   },
   {
     "id": "3-of-spades",
@@ -33,7 +40,14 @@
     },
     "logo": "/3-of-spades-logo.png",
     "latestMilestone": "First release",
-    "nextMilestone": "100 active users"
+    "nextMilestone": "100 active users",
+    "overrides": {
+      "groundSign": {
+        "x": 4.311418091639588,
+        "y": 0.6,
+        "z": 5.242366399438165
+      }
+    }
   },
   {
     "id": "one-percent",
@@ -50,6 +64,13 @@
       "accent": "#dd7373"
     },
     "latestMilestone": "Core loop defined",
-    "nextMilestone": "Beta launch"
+    "nextMilestone": "Beta launch",
+    "overrides": {
+      "groundSign": {
+        "x": 0.6003302765548604,
+        "y": 0.6,
+        "z": 4.823471547601692
+      }
+    }
   }
 ]

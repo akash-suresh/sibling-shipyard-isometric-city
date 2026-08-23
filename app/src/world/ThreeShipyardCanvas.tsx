@@ -67,7 +67,7 @@ export function ThreeShipyardCanvas({
       manager.registerUpdatable(shipyardUpdatable);
     }
 
-    const selectionManager = new SelectionManager(manager.camera, manager.scene, buildingsContainerRef.current, manager.renderer.domElement, manager.cameraControls);
+    const selectionManager = new SelectionManager(manager.camera, manager.scene, manager.worldGroup, manager.renderer.domElement, manager.cameraControls);
     selectionManager.onSelect((id, pos) => {
       setSelectedProjectId(id);
       if (id && pos) {

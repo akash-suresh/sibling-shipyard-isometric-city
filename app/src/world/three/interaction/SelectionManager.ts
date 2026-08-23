@@ -75,19 +75,27 @@ export class SelectionManager implements Updatable {
     const intersects = this.raycaster.intersectObjects(this.worldGroup.children, true);
     
     if (intersects.length > 0) {
-      // Check if we hit terrain
-      const hit = intersects[0];
-      if (hit.object.userData && hit.object.userData.isTerrain) {
-        // Dispatch terrain click
-        const gridX = Math.round(hit.point.x / 2);
-        const gridY = Math.round(hit.point.z / 2);
-        const cevent = new CustomEvent('shipyard-terrain-click', {
-          detail: { x: gridX, y: gridY }
-        });
-        window.dispatchEvent(cevent);
+      // Check if we hit terrain by looking for the first terrain object
+      let terrainHit = null;
+      for (const hit of intersects) {
+        if (hit.object.userData && hit.object.userData.isTerrain) {
+          terrainHit = hit;
+          break;
+        }
       }
 
-      let obj: THREE.Object3D | null = hit.object;
+      if (terrainHit) {
+        const gridX = terrainHit.object.userData.x;
+        const gridY = terrainHit.object.userData.y;
+        if (gridX !== undefined && gridY !== undefined) {
+          const cevent = new CustomEvent('shipyard-terrain-click', {
+            detail: { x: gridX, y: gridY }
+          });
+          window.dispatchEvent(cevent);
+        }
+      }
+
+      let obj: THREE.Object3D | null = intersects[0].object;
       let draggableElement: THREE.Object3D | null = null;
       let projectId: string | null = null;
       let buildingGroup: THREE.Object3D | null = null;
@@ -168,13 +176,6 @@ export class SelectionManager implements Updatable {
     // Update cursor
     this.domElement.style.cursor = this.currentHoveredGroup ? 'pointer' : 'default';
 
-    // Lerp all building scales back to normal (or just leave them)
-    // Actually, I'll just remove the scaling behavior, but to reset it I should set scale to 1.
-    this.worldGroup.children.forEach(child => {
-      if (child.userData && child.userData.projectId) {
-        child.scale.set(1, 1, 1);
-      }
-    });
   }
 
   dispose(): void {

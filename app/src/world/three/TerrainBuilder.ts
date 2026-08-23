@@ -66,12 +66,14 @@ export class TerrainBuilder {
           waterMesh.rotation.x = -Math.PI / 2;
           waterMesh.position.set(worldX, -0.2, worldZ);
           waterMesh.receiveShadow = true;
+          waterMesh.userData = { isTerrain: true, x, y };
           group.add(waterMesh);
           waterMeshes.push({ mesh: waterMesh, ix: x, iy: y });
           
           const dirtMesh = new THREE.Mesh(new THREE.BoxGeometry(CELL_SIZE, 1, CELL_SIZE), dirtMat);
           dirtMesh.position.set(worldX, -1.5, worldZ);
           dirtMesh.receiveShadow = true;
+          dirtMesh.userData = { isTerrain: true, x, y };
           group.add(dirtMesh);
         } else {
           const cellMesh = new THREE.Mesh(terrainGeo, islandMats);
@@ -86,6 +88,7 @@ export class TerrainBuilder {
           const roadMesh = new THREE.Mesh(new THREE.BoxGeometry(CELL_SIZE, 0.05, CELL_SIZE), roadMat);
           roadMesh.position.set(worldX, 0.025, worldZ);
           roadMesh.receiveShadow = true;
+          roadMesh.userData = { isTerrain: true, x, y };
           group.add(roadMesh);
           const hasLeft = roadSet.has(`${x - 1},${y}`);
           const hasRight = roadSet.has(`${x + 1},${y}`);
@@ -98,10 +101,12 @@ export class TerrainBuilder {
           if (isHorizontal) {
             const dash = new THREE.Mesh(new THREE.BoxGeometry(CELL_SIZE * 0.4, 0.02, 0.2), whiteMat);
             dash.position.set(worldX, 0.06, worldZ);
+            dash.userData = { isTerrain: true, x, y };
             group.add(dash);
           } else if (isVertical) {
             const dash = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, CELL_SIZE * 0.4), whiteMat);
             dash.position.set(worldX, 0.06, worldZ);
+            dash.userData = { isTerrain: true, x, y };
             group.add(dash);
           }
         }
@@ -110,6 +115,7 @@ export class TerrainBuilder {
           const plazaMesh = new THREE.Mesh(new THREE.BoxGeometry(CELL_SIZE, 0.05, CELL_SIZE), concreteMat);
           plazaMesh.position.set(worldX, 0.025, worldZ);
           plazaMesh.receiveShadow = true;
+          plazaMesh.userData = { isTerrain: true, x, y };
           group.add(plazaMesh);
         }
 
@@ -117,6 +123,7 @@ export class TerrainBuilder {
           const pathMesh = new THREE.Mesh(new THREE.BoxGeometry(CELL_SIZE * 0.8, 0.08, CELL_SIZE * 0.8), concreteMat);
           pathMesh.position.set(worldX, 0.04, worldZ);
           pathMesh.receiveShadow = true;
+          pathMesh.userData = { isTerrain: true, x, y };
           group.add(pathMesh);
         }
       }
